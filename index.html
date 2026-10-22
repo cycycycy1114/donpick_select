@@ -337,6 +337,8 @@
           banner.style.display = 'block';
         }
 
+        allProducts = data.products || [];
+        
         if (allProducts.length === 0) {
           grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">目前無上架商品</div>';
           return;
