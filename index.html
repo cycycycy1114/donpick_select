@@ -153,7 +153,7 @@
 
   <div class="floating-cart-bar" onclick="openCheckoutDrawer()">
     <div>🛒 查看購物車與結帳 (<span id="floatCartCount">0</span> 件)</div>
-    <div>總計 \$<span id="floatGrandTotal">0</span> ➔</div>
+    <div>總計 $<span id="floatGrandTotal">0</span> ➔</div>
   </div>
 
   <div class="drawer" id="checkoutDrawer" onclick="closeDrawerOnOutside(event, 'checkoutDrawer')">
@@ -196,7 +196,7 @@
 
         <div class="price-summary">
           <span>總計品項：<span id="cartCount">0</span> 項</span>
-          <span>總金額：\$<span id="grandTotal">0</span></span>
+          <span>總金額：$<span id="grandTotal">0</span></span>
         </div>
 
         <button type="button" class="submit-btn" id="submitBtn" onclick="submitOrder()">確認送出全部訂單</button>
@@ -236,7 +236,7 @@
       </div>
 
       <div style="font-size: 14px; color: #0066cc; margin: 12px 0; font-weight: bold; text-align: right;">
-        單價：\$<span id="modalUnitPrice">0</span> | 小計：\$<span id="modalSubtotal">0</span>
+        單價：$<span id="modalUnitPrice">0</span> | 小計：$<span id="modalSubtotal">0</span>
       </div>
 
       <button type="button" class="product-card-btn" style="padding: 10px; font-size: 15px;" onclick="addModalItemToCart()">➕ 加入購物車</button>
@@ -303,7 +303,7 @@
 
       window.categoryMap = {};
       const displayCategories = uniqueRawCats.map(rawCat => {
-        // 🎯 修正正則表達式：明確過濾掉數字後面跟著的 數字、底線、點、頓號或空格
+        // 🎯 完美過濾掉數字後面跟著的底線、頓號、點或空格 (例如 1_新加坡代購 -> 新加坡代購)
         let cleanName = rawCat.replace(/^[\d]+[_、.\s]+/, '').trim();
         window.categoryMap[cleanName] = rawCat;
         return cleanName;
@@ -322,7 +322,7 @@
         container.appendChild(btn);
       });
     }
-    
+
     function filterCategory(rawCategory, displayName, btnElement) {
       currentCategoryName = displayName;
       currentCategory = rawCategory;
@@ -469,4 +469,125 @@
           spec: currentSelectedStyle.styleName,
           price: currentSelectedStyle.price,
           quantity: qty,
-          totalPrice: currentSelectedStyle
+          totalPrice: currentSelectedStyle.price * qty
+        });
+      }
+
+      renderCart();
+      closeModal();
+    }
+
+    function renderCart() {
+      const container = document.getElementById('cartContainer');
+      const cartCountEl = document.getElementById('cartCount');
+      const grandTotalEl = document.getElementById('grandTotal');
+      const floatCartCount = document.getElementById('floatCartCount');
+      const floatGrandTotal = document.getElementById('floatGrandTotal');
+
+      let totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+      let grandTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
+
+      floatCartCount.innerText = totalCount;
+      floatGrandTotal.innerText = grandTotal;
+
+      if (cart.length === 0) {
+        container.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 12px;">購物車尚無商品</div>';
+        cartCountEl.innerText = '0';
+        grandTotalEl.innerText = '0';
+        return;
+      }
+
+      container.innerHTML = '';
+      cart.forEach((item, index) => {
+        container.innerHTML += `
+          <div class="cart-item">
+            <div>
+              <strong>${item.product}</strong> <br>
+              <span style="color:#666;">規格: ${item.spec} x ${item.quantity}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color:#2eaadc; font-weight:bold;">$${item.totalPrice}</span>
+              <button type="button" class="remove-btn" onclick="removeFromCart(${index})">刪除</button>
+            </div>
+          </div>
+        `;
+      });
+
+      cartCountEl.innerText = totalCount;
+      grandTotalEl.innerText = grandTotal;
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      renderCart();
+    }
+
+    function openCheckoutDrawer() {
+      if (cart.length === 0) {
+        alert("購物車是空的，請先挑選商品加入購物車！");
+        return;
+      }
+      document.getElementById('checkoutDrawer').style.display = 'flex';
+    }
+    function closeCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'none'; }
+    function openQueryDrawer() { document.getElementById('queryDrawer').style.display = 'flex'; }
+    function closeQueryDrawer() { document.getElementById('queryDrawer').style.display = 'none'; }
+
+    function closeDrawerOnOutside(event, drawerId) {
+      if (event.target.id === drawerId) document.getElementById(drawerId).style.display = 'none';
+    }
+
+    async function submitOrder() {
+      const nickname = document.getElementById('nickname').value.trim();
+      const contactInfo = document.getElementById('contactInfo').value.trim();
+      const btn = document.getElementById('submitBtn');
+      const msg = document.getElementById('msg');
+
+      if (!nickname || !contactInfo) { alert("請填寫社群暱稱與聯絡資訊！"); return; }
+      if (cart.length === 0) { alert("購物車是空的！"); return; }
+
+      btn.disabled = true;
+      msg.style.color = '#555';
+      msg.innerText = '⏳ 訂單傳送中，請稍候...';
+
+      const data = {
+        nickname: nickname,
+        contactType: document.getElementById('contactType').value || 'LINE ID',
+        contactInfo: contactInfo,
+        delivery: document.getElementById('deliverySelect').value,
+        items: cart
+      };
+
+      try {
+        const res = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+          cart = [];
+          renderCart();
+          msg.style.color = '#333';
+          msg.innerHTML = `
+            <div style="text-align: center; padding: 14px; background: #fdfdfd; border: 2px dashed #4CAF50; border-radius: 8px; margin-top: 12px;">
+              <h3 style="color: #2e7d32; margin-top: 0;">🎉 預購下單成功！</h3>
+              <p style="font-size: 13px; font-weight: bold; color: #d32f2f;">📸 請將此畫面截圖私訊 LINE 官方帳號！</p>
+            </div>
+          `;
+        } else {
+          const errData = await res.json();
+          throw new Error(errData.error || '下單失敗');
+        }
+      } catch (err) {
+        msg.style.color = 'red';
+        msg.innerText = '❌ ' + err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    loadCatalog();
+  </script>
+</body>
+</html>
