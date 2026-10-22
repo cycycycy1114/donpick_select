@@ -40,37 +40,36 @@ export default async function handler(req, res) {
             if (titleKey && p[titleKey].title?.[0]) {
               const name = p[titleKey].title.map(t => t.plain_text).join('');
               if (name) {
-                // 抓取分類 (支援 select / multi_select / rich_text)
-                let category = '伴手禮';
-                const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k].type === 'select');
+                // 🎯 支援 A 表「複選（multi_select）」或單選（select）商品分類
+                let categories = ['伴手禮'];
+                const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k].type === 'multi_select' || p[k].type === 'select');
                 if (catKey) {
                   const prop = p[catKey];
-                  if (prop.type === 'select') category = prop.select?.name || '伴手禮';
-                  else if (prop.type === 'multi_select' && prop.multi_select.length > 0) category = prop.multi_select[0].name || '伴手禮';
-                  else if (prop.type === 'rich_text') category = prop.rich_text.map(t => t.plain_text).join('') || '伴手禮';
+                  if (prop.type === 'multi_select' && prop.multi_select.length > 0) {
+                    categories = prop.multi_select.map(item => item.name);
+                  } else if (prop.type === 'select' && prop.select?.name) {
+                    categories = [prop.select.name];
+                  } else if (prop.type === 'rich_text') {
+                    const txt = prop.rich_text.map(t => t.plain_text).join('');
+                    if (txt) categories = [txt];
+                  }
                 }
 
-                // 抓取介紹文字 (rich_text)
-                let description = '';
-                const descKey = Object.keys(p).find(k => k.includes('介紹') || k.includes('說明') || k.includes('Desc') || p[k].type === 'rich_text');
-                if (descKey && p[descKey].rich_text) {
-                  description = p[descKey].rich_text.map(t => t.plain_text).join('');
-                }
-
-                // 抓取預購/現貨與收單日期 (select 或 rich_text 或 date)
-                let saleType = '預購'; // 預設預購
+                // 抓取預購/現貨
+                let saleType = '預購';
                 const typeKey = Object.keys(p).find(k => k.includes('類型') || k.includes('現貨') || k.includes('狀態'));
                 if (typeKey && p[typeKey].type === 'select') {
                   saleType = p[typeKey].select?.name || '預購';
                 }
 
+                // 抓取收單日期
                 let deadline = '';
                 const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k].type === 'date');
                 if (dateKey && p[dateKey].date) {
                   deadline = p[dateKey].date.start || '';
                 }
 
-                // 是否需訂金 (checkbox 或 select)
+                // 是否需訂金
                 let needDeposit = false;
                 const depositKey = Object.keys(p).find(k => k.includes('訂金') || k.includes('押金'));
                 if (depositKey) {
@@ -80,8 +79,7 @@ export default async function handler(req, res) {
 
                 validAMap[page.id] = {
                   name,
-                  category,
-                  description,
+                  categories,
                   saleType,
                   deadline,
                   needDeposit
@@ -116,13 +114,16 @@ export default async function handler(req, res) {
         return; // 未關聯 A表則排除
       }
 
-      // 🎯 抓取 C表的款式名稱 (title)
+      // 🎯 精準抓取 C 表的款式名稱 (title 或 rich_text)
       let styleName = '標準款式';
-      const styleKey = Object.keys(p).find(k => k.type === 'title' || k.includes('款式') || k.includes('Spec') || k.includes('名稱'));
+      const styleKey = Object.keys(p).find(k => k.type === 'title' || k.includes('款式') || k.includes('Spec') || k.includes('規格') || k.includes('名稱'));
       if (styleKey && p[styleKey]) {
         const prop = p[styleKey];
-        if (prop.type === 'title') styleName = prop.title.map(t => t.plain_text).join('') || '標準款式';
-        else if (prop.type === 'rich_text') styleName = prop.rich_text.map(t => t.plain_text).join('') || '標準款式';
+        if (prop.type === 'title' && prop.title?.[0]) {
+          styleName = prop.title.map(t => t.plain_text).join('') || '標準款式';
+        } else if (prop.type === 'rich_text' && prop.rich_text?.[0]) {
+          styleName = prop.rich_text.map(t => t.plain_text).join('') || '標準款式';
+        }
       }
 
       // 抓取價格 (number)
@@ -137,22 +138,24 @@ export default async function handler(req, res) {
 
       // 抓取圖片 (files)
       let imageUrl = '';
-      const imgKey = Object.keys(p).find(k => p[k].type === 'files' || k.includes('圖'));
+      const imgKey = Object.keys(p).find(k => k.type === 'files' || k.includes('圖'));
       if (imgKey && p[imgKey].files?.[0]) {
         const fileObj = p[imgKey].files[0];
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
       }
 
-      products.push({
-        productName: parentInfo.name,
-        category: parentInfo.category,
-        description: parentInfo.description,
-        saleType: parentInfo.saleType,
-        deadline: parentInfo.deadline,
-        needDeposit: parentInfo.needDeposit,
-        styleName: styleName,
-        price: price,
-        imageUrl: imageUrl
+      // 支援複選分類：將每一個分類都展開成一筆物件，方便前台依不同分類篩選
+      parentInfo.categories.forEach(cat => {
+        products.push({
+          productName: parentInfo.name,
+          category: cat,
+          saleType: parentInfo.saleType,
+          deadline: parentInfo.deadline,
+          needDeposit: parentInfo.needDeposit,
+          styleName: styleName,
+          price: price,
+          imageUrl: imageUrl
+        });
       });
     });
 
