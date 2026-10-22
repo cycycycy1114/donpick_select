@@ -29,18 +29,18 @@ export default async function handler(req, res) {
           let isEnded = false;
           
           // 檢查狀態是否為「已結束」
-          const statusKey = Object.keys(p).find(k => p[k].type === 'status' || k.includes('狀態'));
+          const statusKey = Object.keys(p).find(k => k[k].type === 'status' || k.includes('狀態'));
           if (statusKey && p[statusKey]?.status) {
             const statusVal = p[statusKey].status.name || '';
             if (statusVal.trim() === '已結束') isEnded = true;
           }
 
           if (!isEnded) {
-            const titleKey = Object.keys(p).find(k => p[k].type === 'title');
+            const titleKey = Object.keys(p).find(k => k[k].type === 'title');
             if (titleKey && p[titleKey]?.title?.[0]) {
               const name = p[titleKey].title.map(t => t.plain_text).join('');
               if (name) {
-                // 🎯 穩定抓取複選或單選的「商品分類」
+                // 🎯 支援 A 表「商品分類」（支援 multi_select、select、rich_text）
                 let categories = ['伴手禮'];
                 const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k].type === 'multi_select' || p[k].type === 'select');
                 if (catKey && p[catKey]) {
@@ -53,6 +53,13 @@ export default async function handler(req, res) {
                     const txt = prop.rich_text.map(t => t.plain_text).join('');
                     if (txt) categories = [txt];
                   }
+                }
+
+                // 🎯 抓取 A 表新增的文字屬性「內容介紹」
+                let description = '';
+                const descKey = Object.keys(p).find(k => k.includes('內容介紹') || k.includes('介紹') || k.includes('說明') || p[k].type === 'rich_text');
+                if (descKey && p[descKey]?.rich_text) {
+                  description = p[descKey].rich_text.map(t => t.plain_text).join('');
                 }
 
                 // 抓取現貨/預購
@@ -80,6 +87,7 @@ export default async function handler(req, res) {
                 validAMap[page.id] = {
                   name,
                   categories,
+                  description,
                   saleType,
                   deadline,
                   needDeposit
@@ -101,7 +109,7 @@ export default async function handler(req, res) {
       const p = page.properties;
 
       let parentInfo = null;
-      const relKey = Object.keys(p).find(k => p[k].type === 'relation');
+      const relKey = Object.keys(p).find(k => k[k].type === 'relation');
       
       if (relKey && p[relKey]?.relation?.length > 0) {
         const relId = p[relKey].relation[0].id;
@@ -112,15 +120,15 @@ export default async function handler(req, res) {
         }
       } else {
         if (Object.keys(validAMap).length === 0) {
-          parentInfo = { name: '精選商品', categories: ['伴手禮'], saleType: '預購', deadline: '', needDeposit: false };
+          parentInfo = { name: '精選商品', categories: ['伴手禮'], description: '', saleType: '預購', deadline: '', needDeposit: false };
         } else {
           return; 
         }
       }
 
-      // 🎯 抓取 C 表的款式名稱 (Title 屬性)
+      // 抓取 C 表的款式名稱 (Title 屬性)
       let styleName = '標準款式';
-      const titleKey = Object.keys(p).find(k => p[k].type === 'title');
+      const titleKey = Object.keys(p).find(k => k[k].type === 'title');
       if (titleKey && p[titleKey]?.title?.[0]) {
         styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
       }
@@ -137,7 +145,7 @@ export default async function handler(req, res) {
 
       // 抓取圖片
       let imageUrl = '';
-      const imgKey = Object.keys(p).find(k => p[k].type === 'files' || k.includes('圖'));
+      const imgKey = Object.keys(p).find(k => k.type === 'files' || k.includes('圖'));
       if (imgKey && p[imgKey]?.files?.[0]) {
         const fileObj = p[imgKey].files[0];
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
@@ -146,6 +154,7 @@ export default async function handler(req, res) {
       products.push({
         productName: parentInfo.name,
         categories: parentInfo.categories || ['伴手禮'],
+        description: parentInfo.description || '',
         saleType: parentInfo.saleType,
         deadline: parentInfo.deadline,
         needDeposit: parentInfo.needDeposit,
