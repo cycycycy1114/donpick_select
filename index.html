@@ -7,17 +7,16 @@
   <link rel="icon" type="image/jpeg" href="./Logo.jpg">
   <style>
     :root {
-      --milk-red: #b85b53;       /* 奶茶紅主色 */
-      --milk-red-dark: #964741;  /* 奶茶紅 hover 深色 */
-      --bg-cream: #f9f6f0;       /* 柔和米白底色 */
-      --card-bg: #ffffff;        /* 卡片純白 */
-      --cream-light: #f3efe6;    /* 奶茶米色區塊/邊框色 */
-      --border-color: #e8e2d5;   /* 邊框色 */
-      --text-main: #4a403a;      /* 柔和深色字體 */
+      --milk-red: #b85b53;       
+      --milk-red-dark: #964741;  
+      --bg-cream: #f9f6f0;       
+      --card-bg: #ffffff;        
+      --cream-light: #f3efe6;    
+      --border-color: #e8e2d5;   
+      --text-main: #4a403a;      
     }
 
     body {
-      /* 🎯 改回乾淨俐落的標準無襯線字體 */
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background-color: var(--bg-cream);
       color: var(--text-main);
@@ -45,7 +44,6 @@
       font-size: 24px;
       font-weight: 700;
       color: var(--milk-red);
-      letter-spacing: 0.5px;
     }
     
     .logo-img {
@@ -55,13 +53,9 @@
       border-radius: 50%;
       border: 1px solid var(--border-color);
       background: #fff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
     }
 
-    .header-btns {
-      display: flex;
-      gap: 10px;
-    }
+    .header-btns { display: flex; gap: 10px; }
     .header-btn {
       background: var(--cream-light);
       border: 1px solid var(--border-color);
@@ -71,17 +65,11 @@
       cursor: pointer;
       font-weight: bold;
       color: var(--milk-red);
-      transition: all 0.2s;
     }
     .header-btn:hover { background: #ebd5cd; }
     
-    .container {
-      max-width: 1200px;
-      margin: 20px auto;
-      padding: 0 15px;
-    }
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
 
-    /* 公告欄與瀏覽次數統計看板 */
     .announcement-banner {
       background: #fbf5ee;
       border: 1px solid #ebd5cd;
@@ -107,7 +95,6 @@
       color: #6e625a;
     }
 
-    /* 自動排序分類導覽頁籤 */
     .category-bar {
       display: flex;
       gap: 8px;
@@ -131,7 +118,6 @@
       border-color: var(--milk-red);
     }
 
-    /* 商品網格 */
     .product-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -145,11 +131,8 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 2px 6px rgba(74, 64, 58, 0.03);
-      transition: transform 0.2s;
       position: relative;
     }
-    .product-card:hover { transform: translateY(-3px); }
     
     .product-img-wrapper {
       position: relative;
@@ -179,31 +162,14 @@
       padding: 4px 9px;
       border-radius: 12px;
       font-weight: bold;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
-    .badge-deposit {
-      background: rgba(212, 107, 8, 0.95);
+    .badge-ended {
+      background: rgba(120, 120, 120, 0.9);
     }
 
-    .product-info {
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      flex-grow: 1;
-    }
-    .product-title {
-      font-size: 14px;
-      font-weight: bold;
-      margin-bottom: 6px;
-      line-height: 1.4;
-    }
-    .product-price {
-      color: var(--milk-red);
-      font-weight: bold;
-      font-size: 15px;
-      margin-top: auto;
-      margin-bottom: 10px;
-    }
+    .product-info { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; }
+    .product-title { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+    .product-price { color: var(--milk-red); font-weight: bold; font-size: 15px; margin-top: auto; margin-bottom: 10px; }
     .product-card-btn {
       background: var(--milk-red);
       color: white;
@@ -217,88 +183,38 @@
     }
     .product-card-btn:hover { background: var(--milk-red-dark); }
 
-    /* 浮動購物車按鈕 */
     .float-cart-bar {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: var(--milk-red);
-      color: white;
-      padding: 12px 20px;
-      border-radius: 30px;
+      position: fixed; bottom: 20px; right: 20px;
+      background: var(--milk-red); color: white;
+      padding: 12px 20px; border-radius: 30px;
       box-shadow: 0 4px 15px rgba(184, 91, 83, 0.3);
-      cursor: pointer;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      z-index: 99;
-      font-size: 14px;
+      cursor: pointer; font-weight: bold; z-index: 99; font-size: 14px;
     }
 
-    /* Modal / Drawer 共用樣式 */
     .modal-overlay, .drawer-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(74, 64, 58, 0.4);
-      z-index: 1000;
-      justify-content: center;
-      align-items: center;
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(74, 64, 58, 0.4); z-index: 1000; justify-content: center; align-items: center;
     }
     .modal-card {
-      background: var(--card-bg);
-      width: 90%; max-width: 420px;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-      position: relative;
-      max-height: 90vh;
-      overflow-y: auto;
+      background: var(--card-bg); width: 90%; max-width: 420px;
+      border-radius: 12px; padding: 20px; position: relative; max-height: 90vh; overflow-y: auto;
     }
-    .modal-close {
-      position: absolute; top: 12px; right: 16px;
-      font-size: 20px; cursor: pointer; color: #888;
-    }
+    .modal-close { position: absolute; top: 12px; right: 16px; font-size: 20px; cursor: pointer; color: #888; }
 
-    .styles-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 8px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    .style-card {
-      border: 2px solid var(--border-color);
-      border-radius: 8px;
-      padding: 6px;
-      text-align: center;
-      cursor: pointer;
-      background: var(--cream-light);
-    }
-    .style-card.selected {
-      border-color: var(--milk-red);
-      background: #fbf5ee;
-    }
-    .style-card img {
-      width: 100%; height: 60px; object-fit: cover; border-radius: 4px; cursor: zoom-in;
-    }
+    .styles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; max-height: 200px; overflow-y: auto; }
+    .style-card { border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; text-align: center; cursor: pointer; background: var(--cream-light); }
+    .style-card.selected { border-color: var(--milk-red); background: #fbf5ee; }
+    .style-card img { width: 100%; height: 60px; object-fit: cover; border-radius: 4px; }
 
     .drawer {
-      display: none;
-      position: fixed; top: 0; right: 0; width: 380px; max-width: 100%; height: 100%;
-      background: var(--card-bg); box-shadow: -4px 0 20px rgba(0,0,0,0.1);
-      z-index: 1001; flex-direction: column;
+      display: none; position: fixed; top: 0; right: 0; width: 380px; max-width: 100%; height: 100%;
+      background: var(--card-bg); box-shadow: -4px 0 20px rgba(0,0,0,0.1); z-index: 1001; flex-direction: column;
     }
-    .drawer-header { padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-weight: bold; background: var(--cream-light); }
+    .drawer-header { padding: 16px; border-bottom: 1px solid var(--border-color); font-weight: bold; background: var(--cream-light); display: flex; justify-content: space-between; }
     .drawer-body { padding: 16px; flex-grow: 1; overflow-y: auto; }
     .drawer-footer { padding: 16px; border-top: 1px solid var(--border-color); background: var(--cream-light); }
     
-    .cart-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 0; border-bottom: 1px solid var(--border-color); font-size: 13px;
-    }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color); font-size: 13px; }
     .remove-btn { color: #d9534f; border: none; background: none; cursor: pointer; font-size: 12px; }
 
     .form-group { margin-bottom: 12px; }
@@ -307,12 +223,6 @@
     
     .submit-btn { background: var(--milk-red); color: white; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; }
     .submit-btn:hover { background: var(--milk-red-dark); }
-
-    #lightbox {
-      display: none; position: fixed; z-index: 2000; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); justify-content: center; align-items: center; cursor: zoom-out;
-    }
-    #lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.4); }
   </style>
 </head>
 <body>
@@ -328,48 +238,35 @@
   </header>
 
   <div class="container">
-    <!-- 公告欄 -->
     <div class="announcement-banner" id="announcementBanner">
       <div style="font-weight: bold; margin-bottom: 4px;">📢 最新公告：</div>
       <div id="announcementList"></div>
     </div>
 
-    <!-- 🎯 瀏覽次數統計看板 -->
     <div class="stats-bar">
       <div>🔥 歡迎來到 DonPick 選物小站！</div>
       <div>👀 本站總瀏覽人次：<strong id="visitorCount" style="color: var(--milk-red);">載入中...</strong></div>
     </div>
 
-    <!-- 自動排序分類選單 -->
+    <!-- 分類頁籤列 -->
     <div class="category-bar" id="categoryBar">
       <button class="cat-btn active" onclick="filterCategory('全部', '全部', this)">全部商品</button>
     </div>
 
-    <!-- 商品網格 -->
     <div class="product-grid" id="productGrid">
       <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">⏳ 正在載入商品目錄...</div>
     </div>
 
-    <!-- 客服與售後專區 -->
-    <div style="max-width: 800px; margin: 40px auto; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(74,64,58,0.03); text-align: center; font-size: 15px; line-height: 1.8;">
-      <div style="font-size: 18px; font-weight: bold; color: var(--milk-red); margin-bottom: 8px;">
-        💬 【訂單客服與售後專區】
-      </div>
-      <div style="color: #665c55; margin-bottom: 10px;">
-        有任何匯款、修改資料、合併寄出或商品問題，歡迎隨時聯絡我們：
-      </div>
-      <div style="font-weight: bold;">
-        👉 LINE 客服：<a href="https://lin.ee/9RRJHKL" target="_blank" style="color: #00b900; text-decoration: none; font-size: 16px;">@122dbekb (點選連結加好友)</a>
-      </div>
+    <div style="max-width: 800px; margin: 40px auto; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; text-align: center; font-size: 15px; line-height: 1.8;">
+      <div style="font-size: 18px; font-weight: bold; color: var(--milk-red); margin-bottom: 8px;">💬 【訂單客服與售後專區】</div>
+      <div style="color: #665c55; margin-bottom: 10px;">有任何匯款、修改資料、合併寄出或商品問題，歡迎隨時聯絡我們：</div>
+      <div style="font-weight: bold;">👉 LINE 客服：<a href="https://lin.ee/9RRJHKL" target="_blank" style="color: #00b900; text-decoration: none;">@122dbekb (點選連結加好友)</a></div>
       <div style="margin-top: 18px; border-top: 1px dashed var(--border-color); padding-top: 16px;">
-        <button type="button" onclick="openWishDrawer()" style="background: linear-gradient(135deg, #e8a598, #d87a70); border: none; padding: 10px 24px; border-radius: 20px; font-weight: bold; color: white; cursor: pointer; font-size: 15px; box-shadow: 0 2px 6px rgba(184,91,83,0.15);">
-          ✨ 我要許願想買的商品！
-        </button>
+        <button type="button" onclick="openWishDrawer()" style="background: linear-gradient(135deg, #e8a598, #d87a70); border: none; padding: 10px 24px; border-radius: 20px; font-weight: bold; color: white; cursor: pointer;">✨ 我要許願想買的商品！</button>
       </div>
     </div>
   </div>
 
-  <!-- 浮動購物車按鈕 -->
   <div class="float-cart-bar" onclick="openCheckoutDrawer()">
     🛒 購物車 (<span id="floatCartCount">0</span>) | $<span id="floatGrandTotal">0</span>
   </div>
@@ -379,7 +276,7 @@
     <div class="modal-card">
       <span class="modal-close" onclick="closeModal()">×</span>
       <h3 id="modalProductName" style="margin-top: 0; font-size: 18px; color: var(--milk-red);">商品名稱</h3>
-      <div id="modalProductDesc" style="font-size: 13px; color: #666; margin-bottom: 10px; line-height: 1.5;"></div>
+      <div id="modalProductDesc" style="font-size: 13px; color: #666; margin-bottom: 10px;"></div>
       <div id="modalProductExtra" style="font-size: 13px; font-weight: bold; color: var(--milk-red-dark); margin-bottom: 12px;"></div>
       
       <label style="font-size: 13px; font-weight: bold; display: block; margin-bottom: 4px;">請選擇款式規格：</label>
@@ -394,7 +291,7 @@
         單價： $<span id="modalUnitPrice">0</span> | 小計：$ <span id="modalSubtotal">0</span>
       </div>
 
-      <button type="button" class="product-card-btn" style="padding: 10px; font-size: 15px;" onclick="addModalItemToCart()">➕ 加入購物車</button>
+      <button type="button" class="product-card-btn" onclick="addModalItemToCart()">➕ 加入購物車</button>
     </div>
   </div>
 
@@ -402,7 +299,7 @@
   <div class="drawer" id="checkoutDrawer">
     <div class="drawer-header">
       <span>🛒 您的購物車清單</span>
-      <span style="cursor: pointer; font-size: 18px;" onclick="closeCheckoutDrawer()">×</span>
+      <span style="cursor: pointer;" onclick="closeCheckoutDrawer()">×</span>
     </div>
     <div class="drawer-body">
       <div style="background: #fbf5ee; border: 1px solid #ebd5cd; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; line-height: 1.6; color: #7d403a;">
@@ -413,99 +310,55 @@
           <li><strong>隱私與付款：</strong> 送出訂單後，請直接<strong>截圖私訊 LINE 官方帳號</strong>核對寄件資料與付款。</li>
         </ul>
       </div>
-
-      <div id="cartContainer">
-        <div style="color: #888; font-size: 13px; text-align: center; padding: 12px;">購物車尚無商品</div>
-      </div>
+      <div id="cartContainer"><div style="color: #888; text-align: center; padding: 12px;">購物車尚無商品</div></div>
       <hr style="border:0; border-top:1px solid var(--border-color); margin: 15px 0;">
-      
-      <div class="form-group">
-        <label>社群暱稱 (例如: 小美):</label>
-        <input type="text" id="nickname" placeholder="請輸入您的暱稱">
-      </div>
+      <div class="form-group"><label>社群暱稱:</label><input type="text" id="nickname" placeholder="例如: 小美"></div>
       <div class="form-group">
         <label>聯絡方式:</label>
         <div style="display: flex; gap: 6px;">
-          <select id="contactType" style="width: 110px;">
-            <option value="LINE ID">LINE ID</option>
-            <option value="IG 帳號">IG 帳號</option>
-            <option value="手機號碼">手機號碼</option>
-          </select>
-          <input type="text" id="contactInfo" placeholder="請輸入帳號或號碼" style="flex-grow:1;">
+          <select id="contactType" style="width: 110px;"><option value="LINE ID">LINE ID</option><option value="IG 帳號">IG 帳號</option></select>
+          <input type="text" id="contactInfo" placeholder="請輸入帳號" style="flex-grow:1;">
         </div>
       </div>
       <div class="form-group">
         <label>取貨方式:</label>
-        <select id="deliverySelect">
-          <option value="7-11 店到店">7-11 店到店</option>
-          <option value="面交自取">面交自取(僅雙北)</option>
-        </select>
+        <select id="deliverySelect"><option value="7-11 店到店">7-11 店到店</option><option value="面交自取">面交自取</option></select>
       </div>
-      <div class="form-group">
-        <label>備註 (選填，如許願或合併單):</label>
-        <input type="text" id="orderNote" placeholder="有特殊需求請在此填寫">
-      </div>
+      <div class="form-group"><label>備註:</label><input type="text" id="orderNote" placeholder="特殊需求"></div>
     </div>
     <div class="drawer-footer">
       <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold;">
         <span>總計：<span id="cartCount">0</span> 項</span>
         <span>總金額：$<span id="grandTotal">0</span></span>
       </div>
-      <button type="button" class="submit-btn" id="submitBtn" onclick="submitOrder()">確認送出全部訂單</button>
+      <button type="button" class="submit-btn" onclick="submitOrder()" id="submitBtn">確認送出全部訂單</button>
       <div id="msg" style="margin-top: 8px; text-align: center; font-weight: bold; font-size: 13px;"></div>
     </div>
   </div>
 
-  <!-- 已結單查詢抽屜 -->
+  <!-- 查詢與許願 Drawer... -->
   <div class="drawer" id="queryDrawer">
-    <div class="drawer-header">
-      <span>🔍 查詢您的歷史訂單</span>
-      <span style="cursor: pointer; font-size: 18px;" onclick="closeQueryDrawer()">×</span>
-    </div>
+    <div class="drawer-header"><span>🔍 查詢您的歷史訂單</span><span style="cursor: pointer;" onclick="closeQueryDrawer()">×</span></div>
     <div class="drawer-body">
-      <p style="font-size: 12px; color: #666; margin-top: 0;">請輸入您的 **社群暱稱** 或 **聯絡帳號** 來查詢訂單記錄：</p>
       <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-        <input type="text" id="queryKeyword" placeholder="例如: 小美 或 id" style="flex-grow: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px;">
-        <button type="button" onclick="searchOrders()" style="background: var(--milk-red); color: white; border: none; padding: 0 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px;">查詢</button>
+        <input type="text" id="queryKeyword" placeholder="輸入社群暱稱" style="flex-grow: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+        <button type="button" onclick="searchOrders()" style="background: var(--milk-red); color: white; border: none; padding: 0 16px; border-radius: 6px; font-weight: bold;">查詢</button>
       </div>
-      <div id="queryResultContainer">
-        <div style="padding: 20px; text-align: center; color: #888; background: var(--cream-light); border-radius: 8px; font-size: 13px;">尚未輸入查詢條件</div>
-      </div>
+      <div id="queryResultContainer"><div style="padding: 20px; text-align: center; color: #888;">尚未輸入查詢條件</div></div>
     </div>
   </div>
 
-  <!-- 許願區 Drawer -->
   <div class="drawer-overlay" id="wishDrawer" onclick="closeDrawerOnOutside(event, 'wishDrawer')">
     <div class="modal-card">
       <span onclick="closeWishDrawer()" class="modal-close">×</span>
-      <h3 style="margin-top: 0; color: var(--milk-red); font-size: 18px;">✨ 粉絲專屬許願池</h3>
-      <p style="font-size: 13px; color: #666; margin-bottom: 14px;">想找什麼日本/韓國/當地好物嗎？填寫以下資訊，老闆幫妳找！</p>
-      
-      <div class="form-group">
-        <label>您的暱稱 / 聯絡帳號：</label>
-        <input type="text" id="wishContact" placeholder="例如：小美 (LINE: ccc123)">
-      </div>
-      <div class="form-group">
-        <label>🎯 想許願的商品名稱：</label>
-        <input type="text" id="wishProductName" placeholder="例如：限定款餅乾 / 某牌包包">
-      </div>
-      <div class="form-group">
-        <label>📍 購買地點 / 國家：</label>
-        <input type="text" id="wishLocation" placeholder="例如：東京車站 / 官網">
-      </div>
-      <div class="form-group">
-        <label>💰 預算範圍 (台幣)：</label>
-        <input type="text" id="wishBudget" placeholder="例如：大約 1000 左右">
-      </div>
-
-      <button type="button" onclick="submitWish()" id="wishSubmitBtn" style="width: 100%; background: var(--milk-red); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; margin-top: 10px;">送出許願單 🎁</button>
-      <div id="wishMsg" style="margin-top: 10px; text-align: center; font-size: 13px; font-weight: bold;"></div>
+      <h3 style="margin-top: 0; color: var(--milk-red);">✨ 粉絲專屬許願池</h3>
+      <div class="form-group"><label>您的暱稱 / 聯絡：</label><input type="text" id="wishContact" placeholder="小美"></div>
+      <div class="form-group"><label>想許願的商品：</label><input type="text" id="wishProductName" placeholder="商品名稱"></div>
+      <div class="form-group"><label>購買地點 / 國家：</label><input type="text" id="wishLocation" placeholder="東京車站"></div>
+      <div class="form-group"><label>預算範圍：</label><input type="text" id="wishBudget" placeholder="1000"></div>
+      <button type="button" onclick="submitWish()" id="wishSubmitBtn" style="width: 100%; background: var(--milk-red); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold;">送出許願單 🎁</button>
+      <div id="wishMsg" style="margin-top: 10px; text-align: center; font-weight: bold;"></div>
     </div>
-  </div>
-
-  <!-- Lightbox 圖片放大預覽 -->
-  <div id="lightbox" onclick="this.style.display='none'">
-    <img id="lightboxImg" src="">
   </div>
 
   <script>
@@ -514,9 +367,7 @@
     let currentSelectedStyle = null;
     let cart = [];
     let currentCategory = '全部';
-    let currentCategoryName = '全部';
 
-    // 🎯 串接免費 CountAPI 統計瀏覽人次
     async function loadVisitorStats() {
       try {
         const res = await fetch('https://api.countapi.xyz/hit/donpick-shop/visits');
@@ -532,29 +383,15 @@
       try {
         const res = await fetch('/api/get-products');
         const data = await res.json();
-
-        if (data && data.announcements && Array.isArray(data.announcements) && data.announcements.length > 0) {
-          const banner = document.getElementById('announcementBanner');
-          const listEl = document.getElementById('announcementList');
-          listEl.innerHTML = '';
-          data.announcements.forEach((annText) => {
-            const itemDiv = document.createElement('div');
-            itemDiv.style.marginBottom = '4px';
-            itemDiv.innerText = '• ' + annText;
-            listEl.appendChild(itemDiv);
-          });
-          banner.style.display = 'block';
-        }
-
         if (data.success && data.products) {
           allProducts = data.products;
           buildCategories();
-          renderProducts(currentCategory);
+          renderProducts('全部');
         } else {
           grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">目前無上架商品</div>';
         }
       } catch (err) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: red; padding: 40px;">❌ 載入失敗：${err.message}</div>`;
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: red;">❌ 載入失敗</div>`;
       }
     }
 
@@ -564,11 +401,8 @@
 
       const rawCats = [];
       allProducts.forEach(p => {
-        if (p.categories && Array.isArray(p.categories)) {
-          p.categories.forEach(c => {
-            if (typeof c === 'string' && c.trim() !== '') rawCats.push(c.trim());
-          });
-        } else if (p.category && typeof p.category === 'string') {
+        // 如果是已結束商品，不納入一般常規分類
+        if (p.saleType !== '已結束' && p.category && p.category !== '全部') {
           rawCats.push(p.category.trim());
         }
       });
@@ -576,43 +410,43 @@
       const uniqueRawCats = [...new Set(rawCats)];
       uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
-      window.categoryMap = {};
-      const displayCategories = uniqueRawCats.map(rawCat => {
-        let cleanName = rawCat.replace(/^[\d]+[_、.\s]+/, '').trim();
-        window.categoryMap[cleanName] = rawCat;
-        return cleanName;
-      });
-
-      const categories = ['全部', ...displayCategories];
+      // 🎯 固定包含「全部」、「已結單」分頁
+      const categories = ['全部', ...uniqueRawCats, '已結單'];
       
       bar.innerHTML = '';
       categories.forEach(cat => {
         const btn = document.createElement('button');
-        const filterVal = (cat === '全部') ? '全部' : window.categoryMap[cat];
-        
-        btn.className = `cat-btn ${cat === currentCategoryName ? 'active' : ''}`;
+        btn.className = `cat-btn ${cat === currentCategory ? 'active' : ''}`;
         btn.innerText = cat;
-        btn.onclick = (e) => filterCategory(filterVal, cat, e.target);
+        btn.onclick = (e) => filterCategory(cat, e.target);
         bar.appendChild(btn);
       });
     }
 
-    function filterCategory(rawCategory, displayName, btnEl) {
-      currentCategoryName = displayName;
-      currentCategory = rawCategory;
+    function filterCategory(categoryName, btnEl) {
+      currentCategory = categoryName;
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       if (btnEl) btnEl.classList.add('active');
-      renderProducts(rawCategory);
+      renderProducts(categoryName);
     }
 
     function renderProducts(cat) {
       const grid = document.getElementById('productGrid');
-      const filtered = (cat === '全部') 
-        ? allProducts 
-        : allProducts.filter(p => (p.categories && p.categories.includes(cat)) || p.category === cat);
+      let filtered = [];
+
+      if (cat === '已結單') {
+        // 🎯 點擊「已結單」分頁，只顯示 saleType 為「已結束」的商品
+        filtered = allProducts.filter(p => p.saleType === '已結束');
+      } else if (cat === '全部') {
+        // 🎯 預設「全部」分頁：自動過濾掉已結束商品，只展示進行中/現貨
+        filtered = allProducts.filter(p => p.saleType !== '已結束');
+      } else {
+        // 依其他地區/分類篩選，且排除已結束商品
+        filtered = allProducts.filter(p => p.saleType !== '已結束' && p.category === cat);
+      }
 
       if (filtered.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">此分類目前無商品</div>';
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">${cat === '已結單' ? '目前沒有已結單的歷史商品' : '此分類目前無商品'}</div>`;
         return;
       }
 
@@ -623,16 +457,13 @@
 
       grid.innerHTML = '';
       Object.values(groups).forEach(item => {
-        const imgTag = item.imageUrl 
-          ? `<img src="${item.imageUrl}" onclick="openLightbox('${item.imageUrl}')" alt="${item.productName}">` 
-          : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
+        const imgTag = item.imageUrl ? `<img src="${item.imageUrl}">` : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
         
         let badgesHtml = '';
-        if (item.saleType) {
+        if (item.saleType === '已結束') {
+          badgesHtml += `<span class="badge badge-ended">已結單</span>`;
+        } else if (item.saleType) {
           badgesHtml += `<span class="badge">${item.saleType}</span>`;
-        }
-        if (item.needDeposit) {
-          badgesHtml += `<span class="badge badge-deposit">需訂金</span>`;
         }
 
         grid.innerHTML += `
@@ -644,7 +475,7 @@
             <div class="product-info">
               <div class="product-title">${item.productName}</div>
               <div class="product-price">NT$ ${item.price} 起</div>
-              <button type="button" class="product-card-btn" onclick="openModal('${item.productName}')">選擇規格 / 購買</button>
+              <button type="button" class="product-card-btn" onclick="openModal('${item.productName}')">選擇規格 / 瀏覽</button>
             </div>
           </div>
         `;
@@ -674,9 +505,7 @@
       matchedStyles.forEach((style, idx) => {
         const card = document.createElement('div');
         card.className = 'style-card';
-        const imgTag = style.imageUrl 
-          ? `<img src="${style.imageUrl}" onclick="event.stopPropagation(); openLightbox('${style.imageUrl}')">` 
-          : `<div style="height:50px; background:#eee; font-size:10px; display:flex; align-items:center; justify-content:center; color:#888;">無圖</div>`;
+        const imgTag = style.imageUrl ? `<img src="${style.imageUrl}">` : `<div style="height:50px; background:#eee; font-size:10px; display:flex; align-items:center; justify-content:center;">無圖</div>`;
         
         card.innerHTML = `${imgTag}<div style="font-size:11px; font-weight:bold; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${style.styleName}</div><div style="font-size:10px; color:var(--milk-red);">$${style.price}</div>`;
         
@@ -695,7 +524,6 @@
 
     function closeModal() { document.getElementById('specModal').style.display = 'none'; }
     function closeModalOnOutside(e) { if (e.target.id === 'specModal') closeModal(); }
-
     function updateModalPrice() {
       const qty = parseInt(document.getElementById('modalQuantity').value) || 1;
       if (currentSelectedStyle) {
@@ -706,10 +534,7 @@
     }
 
     function addModalItemToCart() {
-      if (!currentSelectedProduct || !currentSelectedStyle) {
-        alert("請選擇款式規格！");
-        return;
-      }
+      if (!currentSelectedProduct || !currentSelectedStyle) { alert("請選擇款式規格！"); return; }
       const qty = parseInt(document.getElementById('modalQuantity').value) || 1;
       const existing = cart.find(item => item.product === currentSelectedProduct && item.spec === currentSelectedStyle.styleName);
       
@@ -764,17 +589,11 @@
       document.getElementById('grandTotal').innerText = grandTotal;
     }
 
-    function removeFromCart(index) {
-      cart.splice(index, 1);
-      renderCart();
-    }
-
+    function removeFromCart(index) { cart.splice(index, 1); renderCart(); }
     function openCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'flex'; }
     function closeCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'none'; }
-
     function openQueryDrawer() { document.getElementById('queryDrawer').style.display = 'flex'; }
     function closeQueryDrawer() { document.getElementById('queryDrawer').style.display = 'none'; }
-
     function openWishDrawer() { document.getElementById('wishDrawer').style.display = 'flex'; }
     function closeWishDrawer() { document.getElementById('wishDrawer').style.display = 'none'; }
     function closeDrawerOnOutside(e, id) { if (e.target.id === id) document.getElementById(id).style.display = 'none'; }
@@ -789,7 +608,6 @@
       if (cart.length === 0) { alert("購物車是空的！"); return; }
 
       btn.disabled = true;
-      msg.style.color = '#555';
       msg.innerText = '⏳ 訂單傳送中...';
 
       const data = {
@@ -814,11 +632,7 @@
         msg.innerText = '🎉 訂單送出成功！';
         cart = [];
         renderCart();
-        setTimeout(() => {
-          closeCheckoutDrawer();
-          msg.innerText = '';
-          btn.disabled = false;
-        }, 1500);
+        setTimeout(() => { closeCheckoutDrawer(); msg.innerText = ''; btn.disabled = false; }, 1500);
       } catch (err) {
         msg.style.color = '#ff4d4f';
         msg.innerText = '❌ 錯誤：' + err.message;
@@ -826,89 +640,30 @@
       }
     }
 
-    function maskContact(contact) {
-      if (!contact || contact.length <= 4) return '****';
-      const start = contact.substring(0, 2);
-      const end = contact.substring(contact.length - 2);
-      const stars = '*'.repeat(Math.min(contact.length - 4, 6));
-      return start + stars + end;
-    }
-
     async function searchOrders() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
-
-      if (!keyword) { alert("請輸入查詢暱稱或帳號！"); return; }
-      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 13px;">⏳ 正在查詢...</div>';
+      if (!keyword) { alert("請輸入查詢暱稱！"); return; }
+      container.innerHTML = '<div style="text-align: center; color: #888;">⏳ 查詢中...</div>';
 
       try {
         const res = await fetch(`/api/get-orders?keyword=${encodeURIComponent(keyword)}`);
         const data = await res.json();
-        if (!data.success) throw new Error(data.error || '查詢失敗');
-
+        if (!data.success) throw new Error(data.error);
         const orders = data.orders || [];
         if (orders.length === 0) {
-          container.innerHTML = `<div style="padding: 20px; text-align: center; color: #d32f2f; background: #fff5f5; border-radius: 8px; font-size: 13px;">查無符合 「${keyword}」 的訂單記錄。</div>`;
+          container.innerHTML = `<div style="text-align: center; color: #d32f2f;">查無符合訂單記錄</div>`;
           return;
         }
-
-        let grandTotalAll = 0;
-        let totalUnpaidAll = 0;
+        let html = '';
         orders.forEach(ord => {
-          grandTotalAll += (ord.grandTotal || 0);
-          totalUnpaidAll += (ord.unpaidTotal || 0);
+          html += `<div style="background:white; border:1px solid var(--border-color); padding:10px; border-radius:6px; margin-bottom:8px; font-size:13px;">
+            <b>👤 ${ord.nickname}</b> - $${ord.grandTotal}<br>狀態：[${ord.fulfillmentStatus}] / [${ord.paymentStatus}]
+          </div>`;
         });
-
-        let htmlContent = `
-          <div style="background: var(--cream-light); border: 1px solid #ebd5cd; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #7d403a; display: flex; justify-content: space-between; align-items: center;">
-            <div><strong>📊 買家查詢結算：</strong>共找到 ${orders.length} 筆訂單</div>
-            <div style="text-align: right;">
-              <span style="margin-right: 12px;">總消費：$${grandTotalAll}</span>
-              <span style="color: #d32f2f; font-weight: bold; font-size: 14px;">🔥 總尚未結清：$${totalUnpaidAll}</span>
-            </div>
-          </div>
-          <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">訂單明細列表：</div>
-        `;
-
-        orders.forEach(ord => {
-          let itemsHtml = '';
-          ord.items.forEach(item => {
-            const imgTag = item.imageUrl 
-              ? `<img src="${item.imageUrl}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: #eee; cursor: zoom-in;" onclick="openLightbox('${item.imageUrl}')">`
-              : `<div style="width: 36px; height: 36px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #999;">無圖</div>`;
-
-            itemsHtml += `
-              <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--border-color);">
-                ${imgTag}
-                <div style="flex-grow: 1;">
-                  <strong>${item.product}</strong><br>
-                  <span style="color:#666; font-size:12px;">規格：<span style="color: var(--milk-red); font-weight: bold;">${item.spec}</span> x ${item.quantity}</span>
-                </div>
-                <div style="color: var(--milk-red); font-weight: bold;">$${item.price}</div>
-              </div>
-            `;
-          });
-
-          htmlContent += `
-            <div style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">
-                <span style="font-weight: bold; color: var(--milk-red); font-size: 14px;">👤 ${ord.nickname} (${maskContact(ord.contactInfo)})</span>
-                <span style="color: #888; font-size: 12px;">📅 ${ord.createdAt}</span>
-              </div>
-              <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px;">${itemsHtml}</div></div>
-              <div style="display: flex; justify-content: space-between; background: var(--cream-light); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
-                <span><strong>💰 該筆總金額：</strong>$${ord.grandTotal}</span>
-                <span style="color: #d32f2f; font-weight: bold;">⚠️ 尚未結清：$${ord.unpaidTotal}</span>
-              </div>
-              <div><strong>取貨方式：</strong>${ord.delivery} | <strong>狀態：</strong><span style="color: #d46b08; font-weight: bold;">[${ord.fulfillmentStatus}]</span> / <span style="color: #52c41a; font-weight: bold;">[${ord.paymentStatus}]</span></div>
-              ${ord.note ? `<div style="color: #666; margin-top: 4px;"><strong>📝 備註：</strong>${ord.note}</div>` : ''}
-            </div>
-          `;
-        });
-        container.innerHTML = htmlContent;
-
+        container.innerHTML = html;
       } catch (err) {
-        container.innerHTML = `<div style="padding: 20px; text-align: center; color: red; font-size: 13px;">❌ 查詢錯誤：${err.message}</div>`;
+        container.innerHTML = `<div style="color:red;">❌ 錯誤：${err.message}</div>`;
       }
     }
 
@@ -918,12 +673,8 @@
       const location = document.getElementById('wishLocation').value.trim();
       const budget = document.getElementById('wishBudget').value.trim();
       const msgEl = document.getElementById('wishMsg');
-      const btn = document.getElementById('wishSubmitBtn');
 
       if (!productName) { alert("請填寫想許願的商品名稱！"); return; }
-
-      btn.disabled = true;
-      msgEl.style.color = '#555';
       msgEl.innerText = '⏳ 正在送出許願單...';
 
       try {
@@ -933,32 +684,17 @@
           body: JSON.stringify({ nickname: contactInfo, contactInfo, productName, location, budget })
         });
         const data = await res.json();
-        if (!data.success) throw new Error(data.error || '許願失敗');
+        if (!data.success) throw new Error(data.error);
 
         msgEl.style.color = '#52c41a';
-        msgEl.innerText = '🎉 許願成功！老闆已經收到您的心願囉！';
-        setTimeout(() => {
-          closeWishDrawer();
-          msgEl.innerText = '';
-          btn.disabled = false;
-          document.getElementById('wishProductName').value = '';
-          document.getElementById('wishLocation').value = '';
-          document.getElementById('wishBudget').value = '';
-          document.getElementById('wishContact').value = '';
-        }, 2000);
+        msgEl.innerText = '🎉 許願成功！';
+        setTimeout(() => { closeWishDrawer(); msgEl.innerText = ''; }, 2000);
       } catch (err) {
         msgEl.style.color = '#d32f2f';
         msgEl.innerText = '❌ 錯誤：' + err.message;
-        btn.disabled = false;
       }
     }
 
-    function openLightbox(url) {
-      document.getElementById('lightboxImg').src = url;
-      document.getElementById('lightbox').style.display = 'flex';
-    }
-
-    // 🎯 初始化載入
     loadVisitorStats();
     loadCatalog();
   </script>
