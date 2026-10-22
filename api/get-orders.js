@@ -11,7 +11,9 @@ export default async function handler(req, res) {
 
   try {
     const keyword = (req.query.keyword || '').trim();
-    const dbId = process.env.DATABASE_ID;
+    const dbId = process.env.DATABASE_ID;                      // 訂單資料庫 ID
+    const productDbId = process.env.PRODUCT_DB_ID;              // 主商品 A 表 ID
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID; // 款式明細 C 表 ID
 
     if (!dbId) {
       return res.status(500).json({ success: false, error: "缺少 DATABASE_ID 環境變數" });
@@ -21,6 +23,67 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '請輸入查詢的暱稱或聯絡帳號' });
     }
 
+    // 1. 建立 A表（主商品表 ID -> 名稱對照）
+    let aMapById = {};
+    if (productDbId) {
+      try {
+        const aRes = await notion.databases.query({ database_id: productDbId, page_size: 100 });
+        aRes.results.forEach(page => {
+          const p = page.properties || {};
+          const titleKey = Object.keys(p).find(k => p[k].type === 'title');
+          if (titleKey && p[titleKey]?.title?.[0]) {
+            const name = p[titleKey].title.map(t => t.plain_text).join('').trim();
+            if (name) aMapById[page.id] = name;
+          }
+        });
+      } catch (e) {
+        console.warn('讀取 A 表失敗:', e.message);
+      }
+    }
+
+    // 2. 建立 C表（款式明細表字典：用 「主商品名稱_款式名稱」 作為唯一對照 Key，抓取正確圖片與規格）
+    let productDict = {};
+    if (productDetailDbId) {
+      try {
+        const cRes = await notion.databases.query({ database_id: productDetailDbId, page_size: 100 });
+        cRes.results.forEach(page => {
+          const p = page.properties || {};
+
+          // 取得主商品名稱
+          let parentName = '';
+          const relKey = Object.keys(p).find(k => p[k].type === 'relation');
+          if (relKey && p[relKey]?.relation?.length > 0) {
+            const relId = p[relKey].relation[0].id;
+            parentName = aMapById[relId] || '';
+          }
+
+          // 取得款式名稱 (Title)
+          let styleName = '標準款式';
+          const titleKey = Object.keys(p).find(k => p[k].type === 'title');
+          if (titleKey && p[titleKey]?.title?.[0]) {
+            styleName = p[titleKey].title.map(t => t.plain_text).join('').trim() || '標準款式';
+          }
+
+          // 取得圖片
+          let imageUrl = '';
+          const imgKey = Object.keys(p).find(k => p[k].type === 'files' || k.includes('圖'));
+          if (imgKey && p[imgKey]?.files?.[0]) {
+            const fileObj = p[imgKey].files[0];
+            imageUrl = fileObj.file?.url || fileObj.external?.url || '';
+          }
+
+          if (parentName) {
+            // 建立雙重 Key 對應（以防萬一）
+            productDict[`${parentName}_${styleName}`] = { imageUrl, styleName };
+            productDict[styleName] = { imageUrl, styleName }; // 備用
+          }
+        });
+      } catch (e) {
+        console.warn('讀取 C 表字典失敗:', e.message);
+      }
+    }
+
+    // 3. 查詢 Notion 訂單資料庫
     const response = await notion.databases.query({
       database_id: dbId,
       page_size: 100
@@ -43,6 +106,7 @@ export default async function handler(req, res) {
       let paymentStatus = '未付款';
       let imageUrl = '';
 
+      // 解析訂單各欄位
       Object.keys(p).forEach(k => {
         const prop = p[k];
         const lowerKey = k.toLowerCase();
@@ -59,7 +123,6 @@ export default async function handler(req, res) {
           } else if (lowerKey.includes('商品') || lowerKey.includes('品項') || lowerKey === 'product') {
             product = textVal;
           } else if (lowerKey.includes('規格') || lowerKey.includes('款式') || lowerKey.includes('spec')) {
-            // 🎯 確保抓到真正的款式規格，若有內容就採用
             if (textVal && textVal.trim() !== '') {
               spec = textVal.trim();
             }
@@ -94,6 +157,14 @@ export default async function handler(req, res) {
         }
       });
 
+      // 🎯 透過商品 C 表字典精準補回圖片與正確款式
+      const dictKey1 = `${product}_${spec}`;
+      if (productDict[dictKey1]) {
+        if (!imageUrl) imageUrl = productDict[dictKey1].imageUrl;
+      } else if (productDict[spec]) {
+        if (!imageUrl) imageUrl = productDict[spec].imageUrl;
+      }
+
       const matchKeyword = keyword.toLowerCase();
       const matchName = nickname.toLowerCase().includes(matchKeyword);
       const matchContact = contactInfo.toLowerCase().includes(matchKeyword);
@@ -116,7 +187,7 @@ export default async function handler(req, res) {
       }
     });
 
-    // 依時間群組化
+    // 依下單時間群組化
     const groupedOrdersMap = {};
 
     rawRows.forEach(row => {
