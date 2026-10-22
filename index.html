@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DonPick 懂挑 | 線上預購與選物網站</title>
-  <!-- 🎯 瀏覽器分頁小圖 -->
   <link rel="icon" type="image/jpeg" href="./Logo.jpg">
   <style>
     :root {
@@ -42,16 +41,16 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      font-size: 24px; /* 放大整體標題區 */
+      font-size: 24px;
       font-weight: 700;
       color: var(--milk-red);
-      /* 採用更高級優雅的襯線與圓潤選物店風格字體搭配 */
-      font-family: "Georgia", "Noto Serif TC", "Microsoft JhengHei", serif;
-      letter-spacing: 0.5px;
+      /* 🎯 採用溫柔日系雜誌風搭配（英文字母使用優雅襯線，中文使用日系圓體/細明體感） */
+      font-family: "Georgia", "Hiragino Maru Gothic ProN", "Microsoft JhengHei", sans-serif;
+      letter-spacing: 0.8px;
     }
     
     .logo-img {
-      width: 46px;  /* 稍微放大 Logo 圓形圖案以更顯眼 */
+      width: 46px;
       height: 46px;
       object-fit: cover;
       border-radius: 50%;
@@ -136,15 +135,45 @@
       flex-direction: column;
       box-shadow: 0 2px 6px rgba(74, 64, 58, 0.03);
       transition: transform 0.2s;
+      position: relative;
     }
     .product-card:hover { transform: translateY(-3px); }
-    .product-card img {
+    
+    .product-img-wrapper {
+      position: relative;
       width: 100%;
       height: 160px;
-      object-fit: cover;
       background: var(--cream-light);
+    }
+    .product-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
       cursor: zoom-in;
     }
+    
+    /* 🎯 預購與需訂金標籤 */
+    .badges-container {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      z-index: 2;
+    }
+    .badge {
+      background: rgba(184, 91, 83, 0.92);
+      color: white;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .badge-deposit {
+      background: rgba(212, 107, 8, 0.95);
+    }
+
     .product-info {
       padding: 12px;
       display: flex;
@@ -221,7 +250,6 @@
       font-size: 20px; cursor: pointer; color: #888;
     }
 
-    /* 款式選擇卡片網格 */
     .styles-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -246,7 +274,6 @@
       width: 100%; height: 60px; object-fit: cover; border-radius: 4px; cursor: zoom-in;
     }
 
-    /* 抽屜 (Drawer) 樣式 */
     .drawer {
       display: none;
       position: fixed; top: 0; right: 0; width: 380px; max-width: 100%; height: 100%;
@@ -270,7 +297,6 @@
     .submit-btn { background: var(--milk-red); color: white; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; }
     .submit-btn:hover { background: var(--milk-red-dark); }
 
-    /* Lightbox 圖片放大預覽 */
     #lightbox {
       display: none; position: fixed; z-index: 2000; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.85); justify-content: center; align-items: center; cursor: zoom-out;
@@ -282,7 +308,6 @@
 
   <header>
     <div class="logo-area">
-      <!-- 🎯 Logo 與放大質感字體搭配 -->
       <img src="./Logo.jpg" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
       <span>DonPick 懂挑</span>
     </div>
@@ -298,7 +323,7 @@
       <div id="announcementList"></div>
     </div>
 
-    <!-- 自動排序分類選單 (頁籤) -->
+    <!-- 自動排序分類選單 -->
     <div class="category-bar" id="categoryBar">
       <button class="cat-btn active" onclick="filterCategory('全部', '全部', this)">全部商品</button>
     </div>
@@ -308,7 +333,7 @@
       <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">⏳ 正在載入商品目錄...</div>
     </div>
 
-    <!-- 放大後的客服與售後專區 -->
+    <!-- 客服與售後專區 -->
     <div style="max-width: 800px; margin: 40px auto; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(74,64,58,0.03); text-align: center; font-size: 15px; line-height: 1.8;">
       <div style="font-size: 18px; font-weight: bold; color: var(--milk-red); margin-bottom: 8px;">
         💬 【訂單客服與售後專區】
@@ -425,7 +450,7 @@
     </div>
   </div>
 
-  <!-- 許願區 Drawer (純文字版) -->
+  <!-- 許願區 Drawer -->
   <div class="drawer-overlay" id="wishDrawer" onclick="closeDrawerOnOutside(event, 'wishDrawer')">
     <div class="modal-card">
       <span onclick="closeWishDrawer()" class="modal-close">×</span>
@@ -565,11 +590,23 @@
       Object.values(groups).forEach(item => {
         const imgTag = item.imageUrl 
           ? `<img src="${item.imageUrl}" onclick="openLightbox('${item.imageUrl}')" alt="${item.productName}">` 
-          : `<div style="height:160px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
+          : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
         
+        // 🎯 完整讀取狀態與訂金需求標籤
+        let badgesHtml = '';
+        if (item.status) {
+          badgesHtml += `<span class="badge">${item.status}</span>`;
+        }
+        if (item.isDepositNeeded) {
+          badgesHtml += `<span class="badge badge-deposit">需訂金</span>`;
+        }
+
         grid.innerHTML += `
           <div class="product-card">
-            ${imgTag}
+            <div class="product-img-wrapper">
+              ${imgTag}
+              <div class="badges-container">${badgesHtml}</div>
+            </div>
             <div class="product-info">
               <div class="product-title">${item.productName}</div>
               <div class="product-price">NT$ ${item.price} 起</div>
