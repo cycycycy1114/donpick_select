@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     cRes.results.forEach(page => {
       const p = page.properties;
 
-      // 檢查狀態：如果是「已結束」、「已收單」、「下架」、「售完」等狀態，直接跳過不顯示！
+      // 檢查狀態：如果狀態含有結束、已收單、下架、售完，直接跳過不顯示
       const statusKey = Object.keys(p).find(k => k.includes('狀態') || p[k].type === 'status' || p[k].type === 'select');
       if (statusKey) {
         let statusVal = '';
@@ -52,10 +52,9 @@ export default async function handler(req, res) {
         } else if (p[statusKey].type === 'select') {
           statusVal = p[statusKey].select?.name || '';
         }
-        
         const hideKeywords = ['結束', '已收單', '下架', '售完', '關閉', '完售'];
         if (hideKeywords.some(kw => statusVal.includes(kw))) {
-          return; // 直接跳過這筆商品，不傳給前台
+          return; 
         }
       }
 
@@ -79,19 +78,28 @@ export default async function handler(req, res) {
         }
       }
 
-      // 價格 (Number)
-      const priceKey = Object.keys(p).find(k => p[k].type === 'number');
-      const price = priceKey ? (p[priceKey].number || 0) : 0;
+      // 🎯 精準抓取單價：強制尋找屬性為 number 的欄位（避免抓錯欄位）
+      let price = 0;
+      const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
+      if (priceKey) {
+        price = p[priceKey].number || 0;
+      } else {
+        // 如果沒找到特定關鍵字，就抓第一個出現的數字欄位
+        const anyNumKey = Object.keys(p).find(k => p[k].type === 'number');
+        if (anyNumKey) {
+          price = p[anyNumKey].number || 0;
+        }
+      }
 
       // 圖片 (Files)
       const imgKey = Object.keys(p).find(k => p[k].type === 'files');
       let imageUrl = '';
       if (imgKey && p[imgKey].files?.[0]) {
-        const fileObj = p[imgKey].files[0];
+        const fileObj = imgKey.files[0];
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
       }
 
-      // 商品分類 / 地區標籤
+      // 商品分類 (例如地區：東京、大阪、福岡)
       let category = '全部';
       const catKey = Object.keys(p).find(k => k.includes('地區') || k.includes('分類') || k.includes('Tag') || k.includes('分區'));
       if (catKey) {
