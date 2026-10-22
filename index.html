@@ -153,7 +153,7 @@
       cursor: zoom-in;
     }
     
-    /* 🎯 預購與需訂金標籤樣式調整 */
+    /* 預購與需訂金標籤 */
     .badges-container {
       position: absolute;
       top: 8px;
@@ -389,6 +389,16 @@
       <span style="cursor: pointer; font-size: 18px;" onclick="closeCheckoutDrawer()">×</span>
     </div>
     <div class="drawer-body">
+      <!-- 🎯 恢復下單與寄送注意事項提示框 -->
+      <div style="background: #fbf5ee; border: 1px solid #ebd5cd; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; line-height: 1.6; color: #7d403a;">
+        <strong>📢 下單與寄送注意事項：</strong>
+        <ul style="margin: 4px 0 0 16px; padding: 0;">
+          <li><strong>成單與通知：</strong> 商品採預購制，未成單將另行通知；若順利成單將為您採購並寄出。</li>
+          <li><strong>併單寄送：</strong> 若有多筆訂單欲合併寄出，請務必主動私訊 <a href="https://lin.ee/9RRJHKL" target="_blank" style="color: #00b900; font-weight: bold;">LINE 客服</a> 告知！</li>
+          <li><strong>隱私與付款：</strong> 送出訂單後，請直接<strong>截圖私訊 LINE 官方帳號</strong>核對寄件資料與付款。</li>
+        </ul>
+      </div>
+
       <div id="cartContainer">
         <div style="color: #888; font-size: 13px; text-align: center; padding: 12px;">購物車尚無商品</div>
       </div>
@@ -593,7 +603,7 @@
           ? `<img src="${item.imageUrl}" onclick="openLightbox('${item.imageUrl}')" alt="${item.productName}">` 
           : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
         
-        // 🎯 完美對應後端傳回的 saleType 與 needDeposit 欄位
+        // 標籤邏輯
         let badgesHtml = '';
         if (item.saleType) {
           badgesHtml += `<span class="badge">${item.saleType}</span>`;
@@ -737,10 +747,6 @@
     }
 
     function openCheckoutDrawer() {
-      if (cart.length === 0) {
-        alert("購物車是空的，請先挑選商品！");
-        return;
-      }
       document.getElementById('checkoutDrawer').style.display = 'flex';
     }
     function closeCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'none'; }
