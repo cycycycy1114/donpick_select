@@ -18,8 +18,10 @@ export default async function handler(req, res) {
 
     const notion = new Client({ auth: notionToken });
 
-    // 1. 查詢 A表（主商品表），過濾狀態為「已結束」的主商品
+    // 1. 查詢 A表（主商品表），記錄有效商品名稱與其對應的「商品分類」
     let validAMapById = {}; 
+    let categoryMapById = {};
+
     if (productDbId) {
       try {
         const aRes = await notion.databases.query({ database_id: productDbId });
@@ -27,6 +29,7 @@ export default async function handler(req, res) {
           const p = page.properties;
           let isEnded = false;
           
+          // 檢查 A 表狀態是否為「已結束」
           const statusKey = Object.keys(p).find(k => p[k].type === 'status' || k.includes('狀態'));
           if (statusKey && p[statusKey].status) {
             const statusVal = p[statusKey].status.name || '';
@@ -41,6 +44,17 @@ export default async function handler(req, res) {
               const name = p[titleKey].title.map(t => t.plain_text).join('');
               if (name) {
                 validAMapById[page.id] = name;
+
+                // 🎯 抓取 A 表的「商品分類」欄位 (支援 select / multi_select / rich_text)
+                let catName = '其他';
+                const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k].type === 'select');
+                if (catKey) {
+                  const catProp = p[catKey];
+                  if (catProp.type === 'select') catName = catProp.select?.name || '其他';
+                  else if (catProp.type === 'multi_select' && catProp.multi_select.length > 0) catName = catProp.multi_select[0].name || '其他';
+                  else if (catProp.type === 'rich_text') catName = catProp.rich_text.map(t => t.plain_text).join('') || '其他';
+                }
+                categoryMapById[page.id] = catName;
               }
             }
           }
@@ -57,26 +71,20 @@ export default async function handler(req, res) {
     cRes.results.forEach(page => {
       const p = page.properties;
 
-      // 取得主商品名稱（透過 Relation 連結到 A表）
       let parentName = '';
+      let category = '其他';
       const relKey = Object.keys(p).find(k => p[k].type === 'relation');
       
       if (relKey && p[relKey].relation.length > 0) {
         const relId = p[relKey].relation[0].id;
         if (Object.keys(validAMapById).length === 0 || validAMapById[relId]) {
           parentName = validAMapById[relId] || '主商品';
+          category = categoryMapById[relId] || '其他';
         } else {
-          return; // 若 A表狀態為已結束，則排除此筆明細
+          return; // A表狀態為已結束，排除
         }
       } else {
-        const prodKey = Object.keys(p).find(k => k.includes('商品') || k.includes('品名') || k.includes('名稱') || p[k].type === 'title');
-        if (prodKey) {
-          const prop = p[prodKey];
-          if (prop.type === 'title') parentName = prop.title.map(t => t.plain_text).join('');
-          else if (prop.type === 'rich_text') parentName = prop.rich_text.map(t => t.plain_text).join('');
-          else if (prop.type === 'select') parentName = prop.select?.name || '';
-        }
-        if (!parentName) parentName = '精選商品';
+        return; // 若沒有關聯到 A 表則不顯示
       }
 
       // 取得款式名稱
@@ -88,7 +96,7 @@ export default async function handler(req, res) {
         else if (prop.type === 'rich_text') styleName = prop.rich_text.map(t => t.plain_text).join('') || '標準款式';
       }
 
-      // 抓取單價 (Number 屬性)
+      // 抓取單價
       let price = 0;
       const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
       if (priceKey) {
@@ -98,21 +106,12 @@ export default async function handler(req, res) {
         if (anyNumKey) price = p[anyNumKey].number || 0;
       }
 
-      // 抓取圖片 (Files)
+      // 抓取圖片
       let imageUrl = '';
       const imgKey = Object.keys(p).find(k => p[k].type === 'files' || k.includes('圖'));
       if (imgKey && p[imgKey].files?.[0]) {
         const fileObj = p[imgKey].files[0];
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
-      }
-
-      // 商品分類 / 地區標籤
-      let category = '全部';
-      const catKey = Object.keys(p).find(k => k.includes('地區') || k.includes('分類') || k.includes('Tag') || p[k].type === 'select');
-      if (catKey) {
-        const catProp = p[catKey];
-        if (catProp.type === 'select') category = catProp.select?.name || '全部';
-        else if (catProp.type === 'multi_select' && catProp.multi_select.length > 0) category = catProp.multi_select[0].name || '全部';
       }
 
       products.push({
