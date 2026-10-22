@@ -70,18 +70,6 @@
     
     .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
 
-    .announcement-banner {
-      background: #fbf5ee;
-      border: 1px solid #ebd5cd;
-      padding: 14px 18px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      display: none;
-      font-size: 14px;
-      line-height: 1.6;
-      color: #7d403a;
-    }
-
     .stats-bar {
       display: flex;
       justify-content: space-between;
@@ -95,6 +83,7 @@
       color: #6e625a;
     }
 
+    /* 分類分頁籤列 */
     .category-bar {
       display: flex;
       gap: 8px;
@@ -105,12 +94,14 @@
     .cat-btn {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
-      padding: 6px 16px;
+      padding: 8px 18px;
       border-radius: 20px;
       font-size: 13px;
       cursor: pointer;
       white-space: nowrap;
       color: #6e625a;
+      font-weight: bold;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .cat-btn.active {
       background: var(--milk-red);
@@ -182,10 +173,26 @@
       width: 100%;
     }
     .product-card-btn:hover { background: var(--milk-red-dark); }
-    .product-card-btn.ended-btn {
-      background: #888888;
-    }
+    .product-card-btn.ended-btn { background: #888888; }
     .product-card-btn.ended-btn:hover { background: #666666; }
+
+    /* 圖片放大燈箱 (Lightbox) */
+    .lightbox-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      cursor: zoom-out;
+    }
+    .lightbox-content {
+      max-width: 90%;
+      max-height: 90vh;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
 
     .float-cart-bar {
       position: fixed; bottom: 20px; right: 20px;
@@ -208,7 +215,7 @@
     .styles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; max-height: 200px; overflow-y: auto; }
     .style-card { border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; text-align: center; cursor: pointer; background: var(--cream-light); }
     .style-card.selected { border-color: var(--milk-red); background: #fbf5ee; }
-    .style-card img { width: 100%; height: 60px; object-fit: cover; border-radius: 4px; }
+    .style-card img { width: 100%; height: 60px; object-fit: cover; border-radius: 4px; cursor: zoom-in; }
 
     .drawer {
       display: none; position: fixed; top: 0; right: 0; width: 380px; max-width: 100%; height: 100%;
@@ -242,17 +249,12 @@
   </header>
 
   <div class="container">
-    <div class="announcement-banner" id="announcementBanner">
-      <div style="font-weight: bold; margin-bottom: 4px;">📢 最新公告：</div>
-      <div id="announcementList"></div>
-    </div>
-
     <div class="stats-bar">
       <div>🔥 歡迎來到 DonPick 選物小站！</div>
       <div>👀 本站總瀏覽人次：<strong id="visitorCount" style="color: var(--milk-red);">載入中...</strong></div>
     </div>
 
-    <!-- 分類頁籤列 -->
+    <!-- 動態分類分頁籤列 -->
     <div class="category-bar" id="categoryBar">
       <button class="cat-btn active" onclick="filterCategory('全部', this)">全部商品</button>
     </div>
@@ -271,6 +273,11 @@
     </div>
   </div>
 
+  <!-- 圖片放大燈箱 Modal -->
+  <div class="lightbox-overlay" id="lightboxModal" onclick="closeLightbox()">
+    <img class="lightbox-content" id="lightboxImg">
+  </div>
+
   <div class="float-cart-bar" onclick="openCheckoutDrawer()">
     🛒 購物車 (<span id="floatCartCount">0</span>) | $<span id="floatGrandTotal">0</span>
   </div>
@@ -283,7 +290,7 @@
       <div id="modalProductDesc" style="font-size: 13px; color: #666; margin-bottom: 10px;"></div>
       <div id="modalProductExtra" style="font-size: 13px; font-weight: bold; color: var(--milk-red-dark); margin-bottom: 12px;"></div>
       
-      <label style="font-size: 13px; font-weight: bold; display: block; margin-bottom: 4px;">款式規格與價格預覽：</label>
+      <label style="font-size: 13px; font-weight: bold; display: block; margin-bottom: 4px;">款式規格與價格預覽 (點擊圖片可放大)：</label>
       <div id="modalStylesContainer" class="styles-grid"></div>
 
       <div class="form-group" id="modalQtyGroup" style="margin-top: 14px;">
@@ -403,6 +410,7 @@
       const bar = document.getElementById('categoryBar');
       if (!bar) return;
 
+      // 收集所有未結單商品的分類
       const rawCats = [];
       allProducts.forEach(p => {
         if (p.saleType !== '已結束' && p.category && p.category !== '全部') {
@@ -413,6 +421,7 @@
       const uniqueRawCats = [...new Set(rawCats)];
       uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
+      // 分頁籤順序：「全部」、各未結單分類、最後加上「已結單」
       const categories = ['全部', ...uniqueRawCats, '已結單'];
       
       bar.innerHTML = '';
@@ -449,6 +458,7 @@
         return;
       }
 
+      // 同品項合併邏輯
       const productGroups = {};
       filtered.forEach(p => {
         const name = p.productName || '精選商品';
@@ -469,7 +479,9 @@
 
       grid.innerHTML = '';
       Object.values(productGroups).forEach(item => {
-        const imgTag = item.imageUrl ? `<img src="${item.imageUrl}">` : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
+        const imgTag = item.imageUrl 
+          ? `<img src="${item.imageUrl}" onclick="event.stopPropagation(); openLightbox('${item.imageUrl}')">` 
+          : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
         
         let badgesHtml = '';
         let btnText = '選擇規格 / 瀏覽';
@@ -528,7 +540,6 @@
       document.getElementById('modalProductExtra').innerText = extraText;
       document.getElementById('modalQuantity').value = 1;
 
-      // 🎯 若已結束，隱藏數量調整與加入購物車按鈕
       const qtyGroup = document.getElementById('modalQtyGroup');
       const priceSummary = document.getElementById('modalPriceSummary');
       const addToCartBtn = document.getElementById('modalAddToCartBtn');
@@ -550,7 +561,9 @@
       matchedStyles.forEach((style, idx) => {
         const card = document.createElement('div');
         card.className = 'style-card';
-        const imgTag = style.imageUrl ? `<img src="${style.imageUrl}">` : `<div style="height:50px; background:#eee; font-size:10px; display:flex; align-items:center; justify-content:center;">無圖</div>`;
+        const imgTag = style.imageUrl 
+          ? `<img src="${style.imageUrl}" onclick="event.stopPropagation(); openLightbox('${style.imageUrl}')">` 
+          : `<div style="height:60px; background:#eee; font-size:10px; display:flex; align-items:center; justify-content:center;">無圖</div>`;
         
         card.innerHTML = `${imgTag}<div style="font-size:11px; font-weight:bold; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${style.styleName}</div><div style="font-size:10px; color:var(--milk-red);">$${style.price}</div>`;
         
@@ -570,6 +583,15 @@
     function closeModal() { document.getElementById('specModal').style.display = 'none'; }
     function closeModalOnOutside(e) { if (e.target.id === 'specModal') closeModal(); }
     
+    // 圖片燈箱控制
+    function openLightbox(url) {
+      document.getElementById('lightboxImg').src = url;
+      document.getElementById('lightboxModal').style.display = 'flex';
+    }
+    function closeLightbox() {
+      document.getElementById('lightboxModal').style.display = 'none';
+    }
+
     function updateModalPrice() {
       const qty = parseInt(document.getElementById('modalQuantity').value) || 1;
       if (currentSelectedStyle) {
