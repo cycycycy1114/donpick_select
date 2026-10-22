@@ -48,6 +48,13 @@
     .support-banner a { color: #06c755; font-weight: bold; text-decoration: none; }
     .support-banner a:hover { text-decoration: underline; }
 
+    /* 📌 訂購須知提示框 */
+    .notice-box {
+      background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; padding: 12px 14px;
+      margin-bottom: 16px; font-size: 12px; line-height: 1.6; color: #8c6b00;
+    }
+    .notice-box ul { margin: 4px 0 0 18px; padding: 0; }
+
     .product-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -99,7 +106,6 @@
     .style-card.selected { border-color: #2eaadc; background: #eef7fc; }
     .style-card img { width: 100%; height: 75px; object-fit: cover; border-radius: 6px; background: #eee; cursor: zoom-in; }
 
-    /* 🔍 圖片放大燈箱特效 LightBox */
     .lightbox-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85);
       display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px; cursor: zoom-out;
@@ -160,7 +166,6 @@
     </div>
   </div>
 
-  <!-- 🔍 圖片放大燈箱 Modal -->
   <div class="lightbox-overlay" id="lightboxModal" onclick="closeLightbox()">
     <img class="lightbox-content" id="lightboxImg">
   </div>
@@ -179,10 +184,31 @@
 
       <div class="user-info-card">
         <h3>👤 買家訂購資料</h3>
+        
+        <!-- 📌 訂購須知提示 -->
+        <div class="notice-box">
+          <strong>📢 下單前注意事項：</strong>
+          <ul>
+            <li><strong>成單與通知：</strong> 商品採預購制，若未達最低數量不成單將另行通知退款/取消；若順利成單，將直接為您採購並安排寄出。</li>
+            <li><strong>併單寄送：</strong> 若有多筆訂單欲合併寄出，請務必主動聯繫 <a href="https://lin.ee/9RRJHKL" target="_blank" style="color: #0066cc;">LINE 客服</a> 告知！</li>
+          </ul>
+        </div>
+
         <div class="form-group">
           <label>LINE社群暱稱 *</label>
           <input type="text" id="nickname" required placeholder="例如：小明">
         </div>
+
+        <div class="form-group">
+          <label>真實姓名 (取貨核對證件用) *</label>
+          <input type="text" id="fullName" required placeholder="請填寫完整中文姓名">
+        </div>
+
+        <div class="form-group">
+          <label>手機號碼 (到貨簡訊通知) *</label>
+          <input type="tel" id="phone" required placeholder="例如：0912345678">
+        </div>
+
         <div class="form-group">
           <label>聯絡方式 *</label>
           <div class="contact-group">
@@ -193,12 +219,23 @@
             <input type="text" id="contactInfo" required placeholder="請輸入 ID 或帳號" style="width: 65%;">
           </div>
         </div>
+
         <div class="form-group">
           <label>取貨方式 *</label>
-          <select id="deliverySelect" required>
+          <select id="deliverySelect" required onchange="toggleStoreInput()">
             <option value="7-11 店到店">7-11 店到店</option>
             <option value="面交">面交</option>
           </select>
+        </div>
+
+        <div class="form-group" id="storeGroup">
+          <label>7-11 門市名稱與店號 *</label>
+          <input type="text" id="storeName" placeholder="例如：金龍門市 (123456)">
+        </div>
+
+        <div class="form-group">
+          <label>訂單備註 / 許願 (選填)</label>
+          <input type="text" id="note" placeholder="例如：若缺貨請換其他顏色、合併前單等">
         </div>
       </div>
 
@@ -373,7 +410,6 @@
           badgesHtml += `<span class="badge badge-deposit">需訂金</span>`;
         }
 
-        // 🔍 點擊主圖時觸發 openLightbox
         const imgTag = coverImg 
           ? `<img src="${coverImg}" alt="${productName}" onclick="openLightbox('${coverImg}')">`
           : `<div style="height:180px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
@@ -427,7 +463,6 @@
         const card = document.createElement('div');
         card.className = 'style-card';
         
-        // 🔍 點擊規格小圖時也可以放大
         const imgTag = style.imageUrl 
           ? `<img src="${style.imageUrl}" onclick="event.stopPropagation(); openLightbox('${style.imageUrl}')">` 
           : `<div style="height:75px; background:#eee; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#888;">無圖</div>`;
@@ -454,7 +489,6 @@
 
     function closeModal() { document.getElementById('specModal').style.display = 'none'; }
 
-    // 🔍 燈箱開啟與關閉控制
     function openLightbox(imgUrl) {
       const modal = document.getElementById('lightboxModal');
       const img = document.getElementById('lightboxImg');
@@ -464,6 +498,12 @@
 
     function closeLightbox() {
       document.getElementById('lightboxModal').style.display = 'none';
+    }
+
+    function toggleStoreInput() {
+      const delivery = document.getElementById('deliverySelect').value;
+      const storeGroup = document.getElementById('storeGroup');
+      storeGroup.style.display = (delivery === '7-11 店到店') ? 'block' : 'none';
     }
 
     function updateModalPrice() {
@@ -565,11 +605,25 @@
 
     async function submitOrder() {
       const nickname = document.getElementById('nickname').value.trim();
+      const fullName = document.getElementById('fullName').value.trim();
+      const phone = document.getElementById('phone').value.trim();
       const contactInfo = document.getElementById('contactInfo').value.trim();
+      const delivery = document.getElementById('deliverySelect').value;
+      const storeName = document.getElementById('storeName').value.trim();
+      const note = document.getElementById('note').value.trim();
       const btn = document.getElementById('submitBtn');
       const msg = document.getElementById('msg');
 
-      if (!nickname || !contactInfo) { alert("請填寫社群暱稱與聯絡資訊！"); return; }
+      if (!nickname || !fullName || !phone || !contactInfo) {
+        alert("請完整填寫暱稱、真實姓名、手機與聯絡資訊！");
+        return;
+      }
+
+      if (delivery === '7-11 店到店' && !storeName) {
+        alert("選擇 7-11 店到店請填寫門市名稱與店號！");
+        return;
+      }
+
       if (cart.length === 0) { alert("購物車是空的！"); return; }
 
       btn.disabled = true;
@@ -578,9 +632,13 @@
 
       const data = {
         nickname: nickname,
+        fullName: fullName,
+        phone: phone,
         contactType: document.getElementById('contactType').value || 'LINE ID',
         contactInfo: contactInfo,
-        delivery: document.getElementById('deliverySelect').value,
+        delivery: delivery,
+        storeName: storeName,
+        note: note,
         items: cart
       };
 
