@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DonPick 懂挑 | 線上預購與選物網站</title>
   <!-- 瀏覽器分頁小圖 (Favicon) -->
-  <link rel="icon" type="image/png" href="./Logo.png">
+  <link rel="icon" type="image/prg" href="./Logo.prg">
   <style>
     :root {
       --milk-red: #b85b53;       /* 奶茶紅主色 */
@@ -278,7 +278,7 @@
 
   <header>
     <div class="logo-area">
-      <!-- 🎯 讀取專案根目錄中的 Logo.png (若讀取失敗則自動備用顯示) -->
+      <!-- 🎯 讀取專案根目錄中的 Logo.png (若找不到則自動備用顯示) -->
       <img src="./Logo.png" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
       <span>DonPick 懂挑</span>
     </div>
@@ -421,12 +421,12 @@
     </div>
   </div>
 
-  <!-- 許願區 Drawer -->
+  <!-- 許願區 Drawer (純文字版，無圖片上傳) -->
   <div class="drawer-overlay" id="wishDrawer" onclick="closeDrawerOnOutside(event, 'wishDrawer')">
     <div class="modal-card">
       <span onclick="closeWishDrawer()" class="modal-close">×</span>
       <h3 style="margin-top: 0; color: var(--milk-red); font-size: 18px;">✨ 粉絲專屬許願池</h3>
-      <p style="font-size: 13px; color: #666; margin-bottom: 14px;">想找什麼好物嗎？上傳圖片並填寫資訊，老闆幫妳找！</p>
+      <p style="font-size: 13px; color: #666; margin-bottom: 14px;">想找什麼日本/韓國/當地好物嗎？填寫以下資訊，老闆幫妳找！</p>
       
       <div class="form-group">
         <label>您的暱稱 / 聯絡帳號：</label>
@@ -443,13 +443,6 @@
       <div class="form-group">
         <label>💰 預算範圍 (台幣)：</label>
         <input type="text" id="wishBudget" placeholder="例如：大約 1000 左右">
-      </div>
-      <div class="form-group">
-        <label>📷 上傳參考圖片 (會自動壓縮)：</label>
-        <input type="file" id="wishImageFile" accept="image/*" onchange="compressAndPreviewWishImage(this)" style="padding: 4px; font-size: 12px;">
-        <div id="wishImagePreviewContainer" style="margin-top: 8px; display: none;">
-          <img id="wishImagePreview" style="max-height: 80px; border-radius: 6px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="openLightbox(this.src)">
-        </div>
       </div>
 
       <button type="button" onclick="submitWish()" id="wishSubmitBtn" style="width: 100%; background: var(--milk-red); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; margin-top: 10px;">送出許願單 🎁</button>
@@ -469,7 +462,6 @@
     let cart = [];
     let currentCategory = '全部';
     let currentCategoryName = '全部';
-    let wishImageBase64 = '';
 
     async function loadCatalog() {
       const grid = document.getElementById('productGrid');
@@ -520,14 +512,12 @@
 
       const uniqueRawCats = [...new Set(rawCats)];
       
-      // 依照編號文字自然排序
       uniqueRawCats.sort((a, b) => {
         return a.localeCompare(b, 'zh-Hant', { numeric: true });
       });
 
       window.categoryMap = {};
       const displayCategories = uniqueRawCats.map(rawCat => {
-        // 自動去除前面的數字與底線/點/空格（例如 "1_新加坡" -> "新加坡"）
         let cleanName = rawCat.replace(/^[\d]+[_、.\s]+/, '').trim();
         window.categoryMap[cleanName] = rawCat;
         return cleanName;
@@ -859,42 +849,7 @@
       }
     }
 
-    // 自動壓縮許願圖片 (防 413 錯誤)
-    function compressAndPreviewWishImage(input) {
-      if (!input.files || !input.files[0]) return;
-      const file = input.files[0];
-      const reader = new FileReader();
-      
-      reader.onload = function(e) {
-        const img = new Image();
-        img.src = e.target.result;
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 600;
-          const MAX_HEIGHT = 600;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-          } else {
-            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          wishImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
-
-          document.getElementById('wishImagePreview').src = wishImageBase64;
-          document.getElementById('wishImagePreviewContainer').style.display = 'block';
-        };
-      };
-      reader.readAsDataURL(file);
-    }
-
+    // 許願送出（純文字）
     async function submitWish() {
       const contactInfo = document.getElementById('wishContact').value.trim();
       const productName = document.getElementById('wishProductName').value.trim();
@@ -907,19 +862,19 @@
 
       btn.disabled = true;
       msgEl.style.color = '#555';
-      msgEl.innerText = '⏳ 正在送出許願單與壓縮圖片...';
+      msgEl.innerText = '⏳ 正在送出許願單...';
 
       try {
         const res = await fetch('/api/wish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nickname: contactInfo, contactInfo, productName, location, budget, imageUrl: wishImageBase64 })
+          body: JSON.stringify({ nickname: contactInfo, contactInfo, productName, location, budget })
         });
         const data = await res.json();
         if (!data.success) throw new Error(data.error || '許願失敗');
 
         msgEl.style.color = '#52c41a';
-        msgEl.innerText = '🎉 許願成功！老闆已經收到您的心願與圖片囉！';
+        msgEl.innerText = '🎉 許願成功！老闆已經收到您的心願囉！';
         setTimeout(() => {
           closeWishDrawer();
           msgEl.innerText = '';
@@ -927,9 +882,7 @@
           document.getElementById('wishProductName').value = '';
           document.getElementById('wishLocation').value = '';
           document.getElementById('wishBudget').value = '';
-          document.getElementById('wishImageFile').value = '';
-          document.getElementById('wishImagePreviewContainer').style.display = 'none';
-          wishImageBase64 = '';
+          document.getElementById('wishContact').value = '';
         }, 2000);
       } catch (err) {
         msgEl.style.color = '#d32f2f';
