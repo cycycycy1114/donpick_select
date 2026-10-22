@@ -3,21 +3,29 @@ function generateSidebarCategories(products) {
       const allCats = [];
       products.forEach(p => {
         if (p.categories && Array.isArray(p.categories)) {
-          allCats.push(...p.categories);
+          p.categories.forEach(c => {
+            if (typeof c === 'string' && c.trim() !== '') {
+              allCats.push(c.trim());
+            }
+          });
         }
       });
+      
       const uniqueCats = [...new Set(allCats)];
       
-      // 🌟 設定妳想要的自訂順序（只要字串包含這些關鍵字就會排在前面）
+      // 🌟 自訂順序清單（您可以隨時在裡面加想排在前面的分類名稱）
       const customOrder = ['新加坡', '伴手禮']; 
 
       uniqueCats.sort((a, b) => {
-        let indexA = customOrder.findIndex(keyword => a.includes(keyword));
-        let indexB = customOrder.findIndex(keyword => b.includes(keyword));
-        
-        if (indexA === -1) indexA = 999;
-        if (indexB === -1) indexB = 999;
-        return indexA - indexB;
+        let rankA = 999;
+        let rankB = 999;
+
+        customOrder.forEach((keyword, idx) => {
+          if (a.includes(keyword)) rankA = idx;
+          if (b.includes(keyword)) rankB = idx;
+        });
+
+        return rankA - rankB;
       });
 
       const categories = ['全部', ...uniqueCats];
