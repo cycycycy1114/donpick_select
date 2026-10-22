@@ -23,22 +23,36 @@ export default async function handler(req, res) {
     cRes.results.forEach(page => {
       const p = page.properties || {};
 
-      // 1. 狀態與已結單判斷
+      // 🎯 1. 支援 C 表狀態欄位（包含 formula 公式、status、select、rich_text）
       let saleType = '預購'; 
-      const statusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select'));
+      const statusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'formula' || p[k]?.type === 'status' || p[k]?.type === 'select'));
+      
       if (statusKey && p[statusKey]) {
         const prop = p[statusKey];
         let statusVal = '';
-        if (prop.type === 'status') statusVal = prop.status?.name || '';
-        else if (prop.type === 'select') statusVal = prop.select?.name || '';
-        else if (prop.type === 'rich_text' && Array.isArray(prop.rich_text)) {
+
+        if (prop.type === 'formula') {
+          // 公式欄位計算出來的值可能是 string 或 number
+          if (prop.formula?.type === 'string') {
+            statusVal = prop.formula.string || '';
+          } else if (prop.formula?.type === 'number') {
+            statusVal = String(prop.formula.number || '');
+          } else if (prop.formula?.type === 'boolean') {
+            statusVal = prop.formula.boolean ? '已結束' : '進行中';
+          }
+        } else if (prop.type === 'status') {
+          statusVal = prop.status?.name || '';
+        } else if (prop.type === 'select') {
+          statusVal = prop.select?.name || '';
+        } else if (prop.type === 'rich_text' && Array.isArray(prop.rich_text)) {
           statusVal = prop.rich_text.map(t => t?.plain_text || '').join('');
         }
 
-        if (statusVal.trim() === '已結束' || statusVal.trim() === '已結單') {
+        const trimmedVal = statusVal.trim();
+        if (trimmedVal === '已結束' || trimmedVal === '已結單' || trimmedVal.includes('結束') || trimmedVal.includes('結單')) {
           saleType = '已結束';
-        } else if (statusVal.trim() !== '') {
-          saleType = statusVal.trim();
+        } else if (trimmedVal !== '') {
+          saleType = trimmedVal;
         }
       }
 
@@ -78,7 +92,7 @@ export default async function handler(req, res) {
         if (anyNumKey && p[anyNumKey]) price = p[anyNumKey].number || 0;
       }
 
-      // 5. 取得圖片 (Files) - 徹底防呆防 undefined[0]
+      // 5. 取得圖片 (Files)
       let imageUrl = '';
       const imgKey = Object.keys(p).find(k => k && (p[k]?.type === 'files' || k.includes('圖')));
       if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files) && p[imgKey].files.length > 0) {
