@@ -9,9 +9,7 @@ export default async function handler(req, res) {
 
   try {
     const notionToken = process.env.NOTION_TOKEN;
-    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       // 主商品表 A表
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   // 款式明細表 C表
-    const announcementDbId = process.env.ANNOUNCEMENT_DB_ID;                      // 📢 公告資料庫 ID
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID || process.env.DATABASE_ID;                   
 
     if (!notionToken || !productDetailDbId) {
       return res.status(500).json({ success: false, error: '伺服器未設定 Notion 環境變數' });
@@ -19,192 +17,102 @@ export default async function handler(req, res) {
 
     const notion = new Client({ auth: notionToken });
 
-    // 0. 抓取 Notion 公告 (抓取最近的 3 筆，全面防呆)
-    let announcements = [];
-    if (announcementDbId) {
-      try {
-        const annRes = await notion.databases.query({
-          database_id: announcementDbId,
-          sorts: [{ timestamp: 'created_time', direction: 'descending' }],
-          page_size: 3
-        });
-
-        annRes.results.forEach(page => {
-          const p = page.properties || {};
-          const statusKey = Object.keys(p).find(k => k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select');
-          let isHidden = false;
-          if (statusKey && p[statusKey]) {
-            const val = p[statusKey].status?.name || p[statusKey].select?.name || '';
-            if (val === '隱藏' || val === '關閉' || val === '下架') isHidden = true;
-          }
-
-          if (!isHidden) {
-            const descKey = Object.keys(p).find(k => k.includes('內容') || k.includes('說明') || k.includes('公告') || p[k]?.type === 'rich_text');
-            if (descKey && p[descKey]?.rich_text?.[0]) {
-              const text = p[descKey].rich_text.map(t => t.plain_text).join('');
-              if (text) announcements.push(text);
-            }
-          }
-        });
-      } catch (err) {
-        console.warn('公告讀取略過或失敗:', err.message);
-      }
-    }
-
-    // 1. 查詢 A表（主商品表）
-    let validAMap = {}; 
-    if (productDbId) {
-      try {
-        const aRes = await notion.databases.query({ database_id: productDbId });
-        aRes.results.forEach(page => {
-          const p = page.properties || {};
-          let isEnded = false;
-          
-          const statusKey = Object.keys(p).find(k => p[k]?.type === 'status' || k.includes('狀態'));
-          if (statusKey && p[statusKey]?.status) {
-            const statusVal = p[statusKey].status.name || '';
-            if (statusVal.trim() === '已結束') isEnded = true;
-          }
-
-          if (!isEnded) {
-            let name = '';
-            const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
-            if (titleKey && p[titleKey]?.title?.[0]) {
-              name = p[titleKey].title.map(t => t.plain_text).join('');
-            }
-
-            if (name) {
-              let categories = ['伴手禮'];
-              const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k]?.type === 'multi_select');
-              if (catKey && p[catKey]) {
-                const prop = p[catKey];
-                if (prop.type === 'multi_select' && prop.multi_select?.length > 0) {
-                  categories = prop.multi_select.map(item => item.name);
-                } else if (prop.type === 'select' && prop.select?.name) {
-                  categories = [prop.select.name];
-                }
-              }
-
-              let description = '';
-              const descKey = Object.keys(p).find(k => k.includes('內容介紹') || k.includes('介紹') || k.includes('說明'));
-              if (descKey && p[descKey]?.rich_text?.[0]) {
-                description = p[descKey].rich_text.map(t => t.plain_text).join('');
-              }
-
-              // 🛡️ A表日期絕對防呆
-              let aDeadline = '';
-              const dateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k]?.type === 'date'));
-              if (dateKey && p[dateKey]?.date && typeof p[dateKey].date === 'object' && p[dateKey].date.start) {
-                aDeadline = p[dateKey].date.start;
-              }
-
-              let needDeposit = false;
-              const depositKey = Object.keys(p).find(k => k.includes('訂金') || k.includes('押金'));
-              if (depositKey && p[depositKey]) {
-                const prop = p[depositKey];
-                if (prop.type === 'checkbox') needDeposit = prop.checkbox;
-                if (prop.type === 'select' && (prop.select?.name === '是' || prop.select?.name === '需訂金')) needDeposit = true;
-              }
-
-              validAMap[page.id] = {
-                name,
-                categories,
-                description,
-                deadline: aDeadline,
-                needDeposit
-              };
-            }
-          }
-        });
-      } catch (e) {
-        console.warn('A表查詢略過或失敗:', e.message);
-      }
-    }
-
-    // 2. 查詢 C表（款式明細表）
     const cRes = await notion.databases.query({ database_id: productDetailDbId });
     const products = [];
 
     cRes.results.forEach(page => {
-      const p = page.properties || {};
+      const p = page.properties;
 
-      let parentInfo = null;
-      const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
-      
-      if (relKey && p[relKey]?.relation?.length > 0) {
-        const relId = p[relKey].relation[0].id;
-        if (validAMap[relId]) {
-          parentInfo = validAMap[relId];
+      let saleType = '預購'; 
+      let isEnded = false;
+
+      const statusKey = Object.keys(p).find(k => k.includes('狀態') || p[k].type === 'status' || p[k].type === 'select');
+      if (statusKey) {
+        const prop = p[statusKey];
+        let statusVal = '';
+        if (prop.type === 'status') statusVal = prop.status?.name || '';
+        else if (prop.type === 'select') statusVal = prop.select?.name || '';
+        else if (prop.type === 'rich_text') statusVal = prop.rich_text.map(t => t.plain_text).join('') || '';
+
+        if (statusVal.trim() === '已結束') {
+          isEnded = true;
+          saleType = '已結束';
+        } else if (statusVal.trim() !== '') {
+          saleType = statusVal.trim();
         }
       }
 
-      if (!parentInfo) {
-        let fallbackName = '精選預購商品';
-        const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
-        if (titleKey && p[titleKey]?.title?.[0]) {
-          fallbackName = p[titleKey].title.map(t => t.plain_text).join('') || '精選預購商品';
+      const typeKey = Object.keys(p).find(k => k.includes('類型') || k.includes('現貨') || k.includes('預購'));
+      if (typeKey && p[typeKey]) {
+        const prop = p[typeKey];
+        if (prop.type === 'select' && prop.select?.name) {
+          saleType = prop.select.name;
+        } else if (prop.type === 'status' && prop.status?.name) {
+          saleType = prop.status.name;
         }
-        parentInfo = {
-          name: fallbackName,
-          categories: ['伴手禮'],
-          description: '',
-          deadline: '',
-          needDeposit: false
-        };
+      }
+      if (isEnded) saleType = '已結束'; // 強制確保已結束標籤
+
+      let productName = '精選商品';
+      const prodKey = Object.keys(p).find(k => k.includes('商品') || k.includes('品名') || k.includes('名稱') || p[k].type === 'title');
+      if (prodKey) {
+        const prop = p[prodKey];
+        if (prop.type === 'title') productName = prop.title.map(t => t.plain_text).join('') || '精選商品';
+        else if (prop.type === 'rich_text') productName = prop.rich_text.map(t => t.plain_text).join('') || '精選商品';
+        else if (prop.type === 'select') productName = prop.select?.name || '精選商品';
       }
 
       let styleName = '標準款式';
-      const styleKey = Object.keys(p).find(k => (k.includes('款式') || k.includes('Spec')) && p[k]?.type === 'rich_text');
-      if (styleKey && p[styleKey]?.rich_text?.[0]) {
-        styleName = p[styleKey].rich_text.map(t => t.plain_text).join('') || '標準款式';
-      } else {
-        const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
-        if (titleKey && p[titleKey]?.title?.[0]) {
-          styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
-        }
-      }
-
-      // 🛡️ C表日期絕對防呆
-      let deadline = parentInfo.deadline;
-      const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止')) && p[k]?.type === 'date');
-      if (cDateKey && p[cDateKey]?.date && typeof p[cDateKey].date === 'object' && p[cDateKey].date.start) {
-        deadline = p[cDateKey].date.start;
+      const styleKey = Object.keys(p).find(k => k.includes('款式') || k.includes('Spec') || (p[k].type === 'rich_text' && !k.includes('商品')));
+      if (styleKey && p[styleKey]) {
+        const prop = p[styleKey];
+        if (prop.type === 'title') styleName = prop.title.map(t => t.plain_text).join('') || '標準款式';
+        else if (prop.type === 'rich_text') styleName = prop.rich_text.map(t => t.plain_text).join('') || '標準款式';
       }
 
       let price = 0;
-      const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k]?.type === 'number');
-      if (priceKey && p[priceKey]?.number !== undefined) {
+      const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
+      if (priceKey) {
         price = p[priceKey].number || 0;
       } else {
-        const anyNumKey = Object.keys(p).find(k => p[k]?.type === 'number');
-        if (anyNumKey && p[anyNumKey]?.number !== undefined) price = p[anyNumKey].number || 0;
+        const anyNumKey = Object.keys(p).find(k => k[k].type === 'number');
+        if (anyNumKey) price = p[anyNumKey].number || 0;
       }
 
+      const imgKey = Object.keys(p).find(k => p[k].type === 'files' || k.includes('圖'));
       let imageUrl = '';
-      const imgKey = Object.keys(p).find(k => p[k]?.type === 'files' || k.includes('圖'));
-      if (imgKey && p[imgKey]?.files?.[0]) {
-        const fileObj = p[imgKey].files[0];
+      if (imgKey && p[imgKey].files?.[0]) {
+        const fileObj = imgKey.files[0];
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
       }
 
+      let category = '全部';
+      const catKey = Object.keys(p).find(k => k.includes('地區') || k.includes('分類') || k.includes('Tag') || k.includes('分區'));
+      if (catKey) {
+        const catProp = p[catKey];
+        if (catProp.type === 'select') category = catProp.select?.name || '全部';
+        else if (catProp.type === 'multi_select' && catProp.multi_select.length > 0) category = catProp.multi_select[0].name || '全部';
+        else if (catProp.type === 'rich_text') category = catProp.rich_text.map(t => t.plain_text).join('') || '全部';
+      }
+
+      let deadline = '';
+      const dateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k].type === 'date'));
+      if (dateKey && p[dateKey]?.date) {
+        deadline = p[dateKey].date.start || '';
+      }
+
       products.push({
-        productName: parentInfo.name,
-        categories: parentInfo.categories || ['伴手禮'],
-        description: parentInfo.description || '',
-        saleType: '預購',
-        deadline: deadline,
-        needDeposit: parentInfo.needDeposit,
+        productName: productName,
         styleName: styleName,
         price: price,
-        imageUrl: imageUrl
+        imageUrl: imageUrl,
+        category: category,
+        deadline: deadline,
+        saleType: saleType
       });
     });
 
-    return res.status(200).json({ 
-      success: true, 
-      announcements: announcements, 
-      products 
-    });
+    return res.status(200).json({ success: true, products });
 
   } catch (error) {
     console.error("Get Products Error:", error);
