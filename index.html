@@ -256,9 +256,6 @@
         const res = await fetch('/api/get-products');
         const data = await res.json();
         
-        // 🔍 F12 主控台除錯記錄
-        console.log("後端回傳的原始資料:", data);
-
         if (Array.isArray(data)) {
           allProducts = data;
         } else if (data && Array.isArray(data.products)) {
@@ -267,10 +264,8 @@
           allProducts = [];
         }
 
-        console.log("解析後的 allProducts 陣列:", allProducts);
-
         if (allProducts.length === 0) {
-          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">目前無上架商品 (或陣列為空)</div>';
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">目前無上架商品</div>';
           return;
         }
 
@@ -299,7 +294,9 @@
       });
       
       const uniqueCats = [...new Set(allCats)];
-      const customOrder = ['新加坡', '伴手禮']; 
+      
+      // 🌟 【自訂頁籤順序設定】想要哪個分類排在最前面，直接在這裡調整順序！
+      const customOrder = ['新加坡', '伴手禮', '日本連線']; 
 
       uniqueCats.sort((a, b) => {
         let rankA = 999;
@@ -394,8 +391,9 @@
       document.getElementById('modalProductName').innerText = productName;
       document.getElementById('modalProductDesc').innerText = sample.description ? `📝 ${sample.description}` : '';
       
+      // ⏰ 收單日期與訂金標示渲染
       let extraText = '';
-      if (sample.deadline) {
+      if (sample.deadline && sample.deadline.trim() !== '') {
         let cleanDate = sample.deadline.replace('T', ' ').substring(0, 16);
         if (cleanDate.length === 10) cleanDate += ' 17:00';
         extraText += `⏰ 收單日期：${cleanDate} `;
