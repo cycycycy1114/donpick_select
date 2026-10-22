@@ -9,8 +9,9 @@ export default async function handler(req, res) {
 
   try {
     const notionToken = process.env.NOTION_TOKEN;
-    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;        // 主商品表 A表
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                    // 款式明細表 C表
+    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       // 主商品表 A表
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   // 款式明細表 C表
+    const announcementDbId = process.env.ANNOUNCEMENT_DB_ID;                      // 📢 公告資料庫 ID (請在 Vercel 環境變數設定)
 
     if (!notionToken || !productDetailDbId) {
       return res.status(500).json({ success: false, error: '伺服器未設定 Notion 環境變數' });
@@ -18,9 +19,37 @@ export default async function handler(req, res) {
 
     const notion = new Client({ auth: notionToken });
 
+    // 0. 抓取 Notion 公告 (若有設定 ANNOUNCEMENT_DB_ID)
+    let announcementText = '';
+    if (announcementDbId) {
+      try {
+        const annRes = await notion.databases.query({ database_id: announcementDbId });
+        if (annRes.results.length > 0) {
+          // 抓取第一筆（或最新一筆）啟用的公告
+          const p = annRes.results[0].properties || {};
+          
+          // 檢查狀態是否為隱藏
+          const statusKey = Object.keys(p).find(k => k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select');
+          let isHidden = false;
+          if (statusKey && p[statusKey]) {
+            const val = p[statusKey].status?.name || p[statusKey].select?.name || '';
+            if (val === '隱藏' || val === '關閉') isHidden = true;
+          }
+
+          if (!isHidden) {
+            const descKey = Object.keys(p).find(k => k.includes('內容') || k.includes('說明') || k.includes('公告') || p[k]?.type === 'rich_text');
+            if (descKey && p[descKey]?.rich_text?.[0]) {
+              announcementText = p[descKey].rich_text.map(t => t.plain_text).join('');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('公告讀取略過或失敗:', err.message);
+      }
+    }
+
     // 1. 查詢 A表（主商品表）
     let validAMap = {}; 
-
     if (productDbId) {
       try {
         const aRes = await notion.databases.query({ database_id: productDbId });
@@ -42,9 +71,8 @@ export default async function handler(req, res) {
             }
 
             if (name) {
-              // 🎯 抓取分類
               let categories = ['伴手禮'];
-              const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k]?.type === 'multi_select' || p[k]?.type === 'select');
+              const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k]?.type === 'multi_select');
               if (catKey && p[catKey]) {
                 const prop = p[catKey];
                 if (prop.type === 'multi_select' && prop.multi_select?.length > 0) {
@@ -60,11 +88,10 @@ export default async function handler(req, res) {
                 description = p[descKey].rich_text.map(t => t.plain_text).join('');
               }
 
-              // 🎯 萬用抓取 A 表收單日期
               let aDeadline = '';
-              const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止') || k.includes('Deadline') || p[k]?.type === 'date');
-              if (dateKey && p[dateKey]?.date?.start) {
-                aDeadline = p[dateKey].date.start;
+              const dateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k]?.type === 'date'));
+              if (dateKey && p[dateKey]?.date) {
+                aDeadline = p[dateKey].date.start || '';
               }
 
               let needDeposit = false;
@@ -86,7 +113,7 @@ export default async function handler(req, res) {
           }
         });
       } catch (e) {
-        console.error('A表查詢錯誤:', e.message);
+        console.warn('A表查詢略過或失敗:', e.message);
       }
     }
 
@@ -108,8 +135,13 @@ export default async function handler(req, res) {
       }
 
       if (!parentInfo) {
+        let fallbackName = '精選預購商品';
+        const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
+        if (titleKey && p[titleKey]?.title?.[0]) {
+          fallbackName = p[titleKey].title.map(t => t.plain_text).join('') || '精選預購商品';
+        }
         parentInfo = {
-          name: '精選預購商品',
+          name: fallbackName,
           categories: ['伴手禮'],
           description: '',
           deadline: '',
@@ -118,16 +150,20 @@ export default async function handler(req, res) {
       }
 
       let styleName = '標準款式';
-      const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
-      if (titleKey && p[titleKey]?.title?.[0]) {
-        styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
+      const styleKey = Object.keys(p).find(k => (k.includes('款式') || k.includes('Spec')) && p[k]?.type === 'rich_text');
+      if (styleKey && p[styleKey]?.rich_text?.[0]) {
+        styleName = p[styleKey].rich_text.map(t => t.plain_text).join('') || '標準款式';
+      } else {
+        const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
+        if (titleKey && p[titleKey]?.title?.[0]) {
+          styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
+        }
       }
 
-      // 🎯 優先從 C 表抓日期，若無則用 A 表的日期
       let deadline = parentInfo.deadline;
-      const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止') || k.includes('Deadline')) && p[k]?.type === 'date');
+      const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止')) && p[k]?.type === 'date');
       if (cDateKey && p[cDateKey]?.date?.start) {
-        deadline = p[cDateKey].date.start;
+        deadline = cDateKey.date.start;
       }
 
       let price = 0;
@@ -159,7 +195,12 @@ export default async function handler(req, res) {
       });
     });
 
-    return res.status(200).json({ success: true, products });
+    // 回傳產品與抓取到的公告內容
+    return res.status(200).json({ 
+      success: true, 
+      announcement: announcementText, 
+      products 
+    });
 
   } catch (error) {
     console.error("Get Products Error:", error);
