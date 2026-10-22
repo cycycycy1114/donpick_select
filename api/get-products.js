@@ -1,99 +1,4 @@
-import { Client } from '@notionhq/client';
-
-export default async function handler(req, res) {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-
-  if (req.method !== 'GET') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
-  }
-
-  try {
-    const notionToken = process.env.NOTION_TOKEN;
-    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       // 主商品表 A表
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   // 款式明細表 C表
-
-    if (!notionToken || !productDetailDbId) {
-      return res.status(500).json({ success: false, error: '伺服器未設定 Notion 環境變數' });
-    }
-
-    const notion = new Client({ auth: notionToken });
-
-    // 1. 查詢 A表（主商品表）
-    let validAMap = {}; 
-
-    if (productDbId) {
-      try {
-        const aRes = await notion.databases.query({ database_id: productDbId });
-        aRes.results.forEach(page => {
-          const p = page.properties;
-          let isEnded = false;
-          
-          // 檢查狀態是否為「已結束」
-          const statusKey = Object.keys(p).find(k => p[k].type === 'status' || k.includes('狀態'));
-          if (statusKey && p[statusKey].status) {
-            const statusVal = p[statusKey].status.name || '';
-            if (statusVal.trim() === '已結束') isEnded = true;
-          }
-
-          if (!isEnded) {
-            const titleKey = Object.keys(p).find(k => p[k].type === 'title');
-            if (titleKey && p[titleKey].title?.[0]) {
-              const name = p[titleKey].title.map(t => t.plain_text).join('');
-              if (name) {
-                // 🎯 支援 A 表「複選（multi_select）」或單選（select）商品分類
-                let categories = ['伴手禮'];
-                const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k].type === 'multi_select' || p[k].type === 'select');
-                if (catKey) {
-                  const prop = p[catKey];
-                  if (prop.type === 'multi_select' && prop.multi_select.length > 0) {
-                    categories = prop.multi_select.map(item => item.name);
-                  } else if (prop.type === 'select' && prop.select?.name) {
-                    categories = [prop.select.name];
-                  } else if (prop.type === 'rich_text') {
-                    const txt = prop.rich_text.map(t => t.plain_text).join('');
-                    if (txt) categories = [txt];
-                  }
-                }
-
-                // 抓取預購/現貨
-                let saleType = '預購';
-                const typeKey = Object.keys(p).find(k => k.includes('類型') || k.includes('現貨') || k.includes('狀態'));
-                if (typeKey && p[typeKey].type === 'select') {
-                  saleType = p[typeKey].select?.name || '預購';
-                }
-
-                // 抓取收單日期
-                let deadline = '';
-                const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k].type === 'date');
-                if (dateKey && p[dateKey].date) {
-                  deadline = p[dateKey].date.start || '';
-                }
-
-                // 是否需訂金
-                let needDeposit = false;
-                const depositKey = Object.keys(p).find(k => k.includes('訂金') || k.includes('押金'));
-                if (depositKey) {
-                  if (p[depositKey].type === 'checkbox') needDeposit = p[depositKey].checkbox;
-                  else if (p[depositKey].type === 'select') needDeposit = (p[depositKey].select?.name === '是' || p[depositKey].select?.name === '需訂金');
-                }
-
-                validAMap[page.id] = {
-                  name,
-                  categories,
-                  saleType,
-                  deadline,
-                  needDeposit
-                };
-              }
-            }
-          }
-        });
-      } catch (e) {
-        console.error('A表查詢錯誤:', e.message);
-      }
-    }
-
-    // 2. 查詢 C表（款式明細表）
+// 2. 查詢 C表（款式明細表）
     const cRes = await notion.databases.query({ database_id: productDetailDbId });
     const products = [];
 
@@ -114,16 +19,11 @@ export default async function handler(req, res) {
         return; // 未關聯 A表則排除
       }
 
-      // 🎯 精準抓取 C 表的款式名稱 (title 或 rich_text)
+      // 🎯 【直接鎖定】抓取 C 表中 type === 'title'（即標題欄位「款式名稱」）的文字
       let styleName = '標準款式';
-      const styleKey = Object.keys(p).find(k => k.type === 'title' || k.includes('款式') || k.includes('Spec') || k.includes('規格') || k.includes('名稱'));
-      if (styleKey && p[styleKey]) {
-        const prop = p[styleKey];
-        if (prop.type === 'title' && prop.title?.[0]) {
-          styleName = prop.title.map(t => t.plain_text).join('') || '標準款式';
-        } else if (prop.type === 'rich_text' && prop.rich_text?.[0]) {
-          styleName = prop.rich_text.map(t => t.plain_text).join('') || '標準款式';
-        }
+      const titleKey = Object.keys(p).find(k => p[k].type === 'title');
+      if (titleKey && p[titleKey].title?.[0]) {
+        styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
       }
 
       // 抓取價格 (number)
@@ -144,25 +44,14 @@ export default async function handler(req, res) {
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
       }
 
-      // 支援複選分類：將每一個分類都展開成一筆物件，方便前台依不同分類篩選
-      parentInfo.categories.forEach(cat => {
-        products.push({
-          productName: parentInfo.name,
-          category: cat,
-          saleType: parentInfo.saleType,
-          deadline: parentInfo.deadline,
-          needDeposit: parentInfo.needDeposit,
-          styleName: styleName,
-          price: price,
-          imageUrl: imageUrl
-        });
+      products.push({
+        productName: parentInfo.name,
+        categories: parentInfo.categories,
+        saleType: parentInfo.saleType,
+        deadline: parentInfo.deadline,
+        needDeposit: parentInfo.needDeposit,
+        styleName: styleName,
+        price: price,
+        imageUrl: imageUrl
       });
     });
-
-    return res.status(200).json({ success: true, products });
-
-  } catch (error) {
-    console.error("Get Products Error:", error);
-    return res.status(500).json({ success: false, error: error.message || String(error) });
-  }
-}
