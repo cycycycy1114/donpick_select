@@ -296,14 +296,15 @@
       
       const uniqueRawCats = [...new Set(rawCats)];
       
-      // 🌟 自動依據 Notion 名稱前面的數字排序（例如 1_新加坡, 2_伴手禮）
+      // 🌟 自動依據 Notion 名稱前面的數字排序
       uniqueRawCats.sort((a, b) => {
         return a.localeCompare(b, 'zh-Hant', { numeric: true });
       });
 
       window.categoryMap = {};
       const displayCategories = uniqueRawCats.map(rawCat => {
-        let cleanName = rawCat.replace(/^\d+[_、.\s]+/, '');
+        // 🎯 修正正則表達式：明確過濾掉數字後面跟著的 數字、底線、點、頓號或空格
+        let cleanName = rawCat.replace(/^[\d]+[_、.\s]+/, '').trim();
         window.categoryMap[cleanName] = rawCat;
         return cleanName;
       });
@@ -321,7 +322,7 @@
         container.appendChild(btn);
       });
     }
-
+    
     function filterCategory(rawCategory, displayName, btnElement) {
       currentCategoryName = displayName;
       currentCategory = rawCategory;
