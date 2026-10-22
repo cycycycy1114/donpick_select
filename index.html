@@ -46,7 +46,6 @@
     }
     .product-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
     
-    /* 標籤徽章 (現貨/預購/訂金) */
     .badge-container {
       position: absolute; top: 8px; left: 8px; display: flex; gap: 4px; flex-wrap: wrap; z-index: 2;
     }
@@ -58,13 +57,10 @@
     .badge-deposit { background: #faad14; }    /* 需訂金 */
 
     .product-card img { width: 100%; height: 150px; object-fit: cover; background: #eee; }
-    .product-card-body { padding: 10px; display: flex; flex-direction: column; flex-grow: 1; }
+    .product-card-body { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; }
     .product-card-title {
-      font-size: 13px; font-weight: bold; margin-bottom: 4px; line-height: 1.3; height: 34px; overflow: hidden;
+      font-size: 13px; font-weight: bold; margin-bottom: 8px; line-height: 1.3; height: 34px; overflow: hidden;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    }
-    .product-card-desc {
-      font-size: 11px; color: #7717; margin-bottom: 6px; height: 28px; overflow: hidden; color: #666;
     }
     .product-card-price { font-size: 14px; font-weight: bold; color: #2eaadc; margin-top: auto; margin-bottom: 8px; }
     .product-card-btn {
@@ -213,10 +209,9 @@
     <div class="modal-card">
       <span class="modal-close" onclick="closeModal()">&times;</span>
       <h3 id="modalProductName" style="margin-top: 0; font-size: 16px; color: #2eaadc;">商品名稱</h3>
-      <div id="modalProductDesc" style="font-size: 12px; color: #666; margin-bottom: 10px;"></div>
       <div id="modalProductExtra" style="font-size: 12px; font-weight: bold; color: #d32f2f; margin-bottom: 10px;"></div>
       
-      <label style="font-size: 12px; font-weight: bold; margin-top: 8px; display: block;">請選擇款式規格 (C表)：</label>
+      <label style="font-size: 13px; font-weight: bold; margin-top: 8px; display: block;">請選擇款式規格</label>
       <div id="modalStylesContainer" class="styles-grid"></div>
 
       <div class="form-group" style="margin-top: 12px;">
@@ -262,7 +257,8 @@
 
     function generateSidebarCategories(products) {
       const container = document.getElementById('sidebarCategories');
-      const categories = ['全部', ...new Set(products.map(p => p.category || '伴手禮').filter(c => c !== '全部'))];
+      const allCats = products.flatMap(p => p.category ? [p.category] : ['伴手禮']);
+      const categories = ['全部', ...new Set(allCats.filter(c => c !== '全部'))];
       
       container.innerHTML = '';
       categories.forEach(cat => {
@@ -326,7 +322,6 @@
             ${imgTag}
             <div class="product-card-body">
               <div class="product-card-title">${productName}</div>
-              <div class="product-card-desc">${firstStyle.description || ''}</div>
               <div class="product-card-price">$${minPrice} 起</div>
               <button class="product-card-btn" onclick="openModal('${productName}')">選購規格</button>
             </div>
@@ -342,7 +337,6 @@
       const sample = matchedStyles[0] || {};
       
       document.getElementById('modalProductName').innerText = productName;
-      document.getElementById('modalProductDesc').innerText = sample.description ? `💡 介紹：${sample.description}` : '';
       
       let extraText = '';
       if (sample.deadline) extraText += `⏰ 收單日期：${sample.deadline} `;
@@ -354,7 +348,6 @@
       container.innerHTML = '';
       currentSelectedStyle = null;
 
-      // 🎯 這裡直接抓取 C 表的款式名稱 (styleName)
       matchedStyles.forEach((style, idx) => {
         const card = document.createElement('div');
         card.className = 'style-card';
