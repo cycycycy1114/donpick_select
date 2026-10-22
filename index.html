@@ -677,7 +677,7 @@
       }
     }
     
-    async function searchOrders() {
+async function searchOrders() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
 
@@ -707,16 +707,35 @@
           return;
         }
 
-        container.innerHTML = `<div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">找到 ${orders.length} 筆相關訂單：</div>`;
+        // 🎯 計算所有訂單加總的「總尚未結清金額」與「總消費金額」
+        let grandTotalAll = 0;
+        let totalUnpaidAll = 0;
 
         orders.forEach(ord => {
-          // 組裝多個品項的列表
+          grandTotalAll += (ord.grandTotal || 0);
+          totalUnpaidAll += (ord.unpaidTotal || 0);
+        });
+
+        // 🎯 最上方顯示總結算看板
+        let htmlContent = `
+          <div style="background: linear-gradient(135deg, #fffbe6, #fff1b8); border: 1px solid #ffe58f; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #8c6b00; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+            <div><strong>📊 買家查詢結算：</strong>共找到 ${orders.length} 筆訂單</div>
+            <div style="text-align: right;">
+              <span style="margin-right: 12px;">總消費：$${grandTotalAll}</span>
+              <span style="color: #d32f2f; font-weight: bold; font-size: 14px;">🔥 總尚未結清：$${totalUnpaidAll}</span>
+            </div>
+          </div>
+          <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">訂單明細列表：</div>
+        `;
+
+        // 逐筆組裝訂單卡片
+        orders.forEach(ord => {
           let itemsHtml = '';
           ord.items.forEach(item => {
             itemsHtml += `<div style="padding: 3px 0; border-bottom: 1px dashed #eee;">• <strong>${item.product}</strong> / 規格：<span style="color: #2eaadc; font-weight: bold;">${item.spec}</span> x ${item.quantity} (<b>$${item.price}</b>)</div>`;
           });
 
-          container.innerHTML += `
+          htmlContent += `
             <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
               <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px;">
                 <span style="font-weight: bold; color: #2eaadc; font-size: 14px;">👤 ${ord.nickname} (${ord.contactInfo})</span>
@@ -724,14 +743,16 @@
               </div>
               <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px; padding-left: 6px;">${itemsHtml}</div></div>
               <div style="display: flex; justify-content: space-between; background: #fcfcfc; padding: 8px; border-radius: 6px; margin-bottom: 6px;">
-                <span><strong>💰 訂單總金額：</strong>$${ord.grandTotal}</span>
-                <span style="color: #d32f2f; font-weight: bold;">⚠️ 尚未結清金額：$${ord.unpaidTotal}</span>
+                <span><strong>💰 該筆總金額：</strong>$${ord.grandTotal}</span>
+                <span style="color: #d32f2f; font-weight: bold;">⚠️ 尚未結清：$${ord.unpaidTotal}</span>
               </div>
               <div><strong>取貨方式：</strong>${ord.delivery} | <strong>狀態：</strong><span style="color: #d46b08; font-weight: bold;">[${ord.fulfillmentStatus}]</span> / <span style="color: #52c41a; font-weight: bold;">[${ord.paymentStatus}]</span></div>
               ${ord.note ? `<div style="color: #666; margin-top: 4px;"><strong>📝 備註：</strong>${ord.note}</div>` : ''}
             </div>
           `;
         });
+
+        container.innerHTML = htmlContent;
 
       } catch (err) {
         container.innerHTML = `<div style="padding: 20px; text-align: center; color: red; font-size: 13px;">❌ 查詢發生錯誤：${err.message}</div>`;
