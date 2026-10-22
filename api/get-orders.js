@@ -24,10 +24,10 @@ export default async function handler(req, res) {
     // 查詢 Notion 訂單資料庫
     const response = await notion.databases.query({
       database_id: dbId,
-      page_size: 50
+      page_size: 100
     });
 
-    const orders = [];
+    const rawRows = [];
 
     response.results.forEach(page => {
       const p = page.properties || {};
@@ -36,14 +36,14 @@ export default async function handler(req, res) {
       let contactInfo = '';
       let product = '';
       let spec = '';
-      let quantity = 0;
+      let quantity = 1;
       let totalPrice = 0;
-      let delivery = '';
+      let delivery = '未填寫';
       let note = '';
       let fulfillmentStatus = '備貨中';
       let paymentStatus = '未付款';
 
-      // 🎯 精準辨識各個欄位
+      // 智慧辨識各個 Notion 欄位
       Object.keys(p).forEach(k => {
         const prop = p[k];
         const lowerKey = k.toLowerCase();
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
           } else if (lowerKey.includes('商品') || lowerKey.includes('品項') || lowerKey === 'product') {
             product = textVal;
           } else if (lowerKey.includes('規格') || lowerKey.includes('款式') || lowerKey.includes('spec')) {
-            spec = textVal; // 🎯 確保嚴格對應規格/款式欄位
+            spec = textVal; // 🎯 嚴格抓取規格欄位
           } else if (lowerKey.includes('備註') || lowerKey.includes('許願') || lowerKey.includes('note')) {
             note = textVal;
           }
@@ -74,8 +74,10 @@ export default async function handler(req, res) {
           if (lowerKey.includes('出貨') || lowerKey.includes('物流')) fulfillmentStatus = statusVal;
           if (lowerKey.includes('付款') || lowerKey.includes('金流')) paymentStatus = statusVal;
         } else if (prop.type === 'number') {
-          if (lowerKey.includes('數量') || lowerKey.includes('quantity')) quantity = prop.number || 0;
-          if (lowerKey.includes('總金額') || lowerKey.includes('總價') || lowerKey.includes('total')) totalPrice = prop.number || 0;
+          if (lowerKey.includes('數量') || lowerKey.includes('quantity')) quantity = prop.number || 1;
+          if (lowerKey.includes('總金額') || lowerKey.includes('總價') || lowerKey.includes('total') || lowerKey.includes('金額')) {
+            totalPrice = prop.number || 0;
+          }
         }
       });
 
@@ -85,21 +87,60 @@ export default async function handler(req, res) {
       const matchContact = contactInfo.toLowerCase().includes(matchKeyword);
 
       if (matchName || matchContact) {
-        orders.push({
+        rawRows.push({
           nickname,
           contactInfo,
           product: product || '未命名商品',
           spec: spec || '標準款式',
-          quantity: quantity || 1,
-          totalPrice: totalPrice || 0,
-          delivery: delivery || '未填寫',
-          note: note || '',
+          quantity: quantity,
+          totalPrice: totalPrice,
+          delivery,
+          note,
           fulfillmentStatus,
           paymentStatus,
-          createdAt: page.created_time ? page.created_time.substring(0, 10) : ''
+          createdAt: page.created_time ? page.created_time.substring(0, 16).replace('T', ' ') : '',
+          rawTime: page.created_time ? new Date(page.created_time).getTime() : 0
         });
       }
     });
+
+    // 🎯 把同一次結帳的品項群組化（依建立時間相近或相同）
+    const groupedOrdersMap = {};
+
+    rawRows.forEach(row => {
+      // 用建立時間作為同一筆訂單的群組依據（精確到分鐘內送出的視為同一次下單）
+      const timeKey = row.createdAt; 
+      if (!groupedOrdersMap[timeKey]) {
+        groupedOrdersMap[timeKey] = {
+          nickname: row.nickname,
+          contactInfo: row.contactInfo,
+          delivery: row.delivery,
+          note: row.note,
+          fulfillmentStatus: row.fulfillmentStatus,
+          paymentStatus: row.paymentStatus,
+          createdAt: row.createdAt,
+          items: [],
+          grandTotal: 0,
+          unpaidTotal: 0 // 尚未結清金額
+        };
+      }
+
+      groupedOrdersMap[timeKey].items.push({
+        product: row.product,
+        spec: row.spec,
+        quantity: row.quantity,
+        price: row.totalPrice
+      });
+
+      groupedOrdersMap[timeKey].grandTotal += row.totalPrice;
+
+      // 如果付款狀態不是「已付款」，則計入尚未結清金額
+      if (!row.paymentStatus.includes('已付款') && !row.paymentStatus.includes('結清')) {
+        groupedOrdersMap[timeKey].unpaidTotal += row.totalPrice;
+      }
+    });
+
+    const orders = Object.values(groupedOrdersMap);
 
     return res.status(200).json({ success: true, orders });
 
