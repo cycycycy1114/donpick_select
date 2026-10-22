@@ -430,18 +430,15 @@
       renderProducts(categoryName);
     }
 
-    function renderProducts(cat) {
+function renderProducts(cat) {
       const grid = document.getElementById('productGrid');
       let filtered = [];
 
       if (cat === '已結單') {
-        // 🎯 點擊「已結單」分頁，只顯示 saleType 為「已結束」的商品
         filtered = allProducts.filter(p => p.saleType === '已結束');
       } else if (cat === '全部') {
-        // 🎯 預設「全部」分頁：自動過濾掉已結束商品，只展示進行中/現貨
         filtered = allProducts.filter(p => p.saleType !== '已結束');
       } else {
-        // 依其他地區/分類篩選，且排除已結束商品
         filtered = allProducts.filter(p => p.saleType !== '已結束' && p.category === cat);
       }
 
@@ -450,13 +447,28 @@
         return;
       }
 
-      const groups = {};
+      // 🎯 關鍵修正：將 C 表的資料依「商品名稱 (productName)」進行群組合併，同品項只顯示一格！
+      const productGroups = {};
       filtered.forEach(p => {
-        if (!groups[p.productName]) groups[p.productName] = p;
+        const name = p.productName || '精選商品';
+        if (!productGroups[name]) {
+          productGroups[name] = {
+            productName: name,
+            imageUrl: p.imageUrl || '', // 抓第一張圖片當代表圖
+            prices: [],
+            saleType: p.saleType,
+            deadline: p.deadline
+          };
+        }
+        if (p.price) productGroups[name].prices.push(p.price);
+        // 如果該群組內只要有一張有圖片就優先保留
+        if (!productGroups[name].imageUrl && p.imageUrl) {
+          productGroups[name].imageUrl = p.imageUrl;
+        }
       });
 
       grid.innerHTML = '';
-      Object.values(groups).forEach(item => {
+      Object.values(productGroups).forEach(item => {
         const imgTag = item.imageUrl ? `<img src="${item.imageUrl}">` : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
         
         let badgesHtml = '';
@@ -464,6 +476,14 @@
           badgesHtml += `<span class="badge badge-ended">已結單</span>`;
         } else if (item.saleType) {
           badgesHtml += `<span class="badge">${item.saleType}</span>`;
+        }
+
+        // 計算最低價 / 價格範圍呈現
+        let priceText = '價格請點擊內文';
+        if (item.prices.length > 0) {
+          const minPrice = Math.min(...item.prices);
+          const maxPrice = Math.max(...item.prices);
+          priceText = minPrice === maxPrice ? `NT$ ${minPrice}` : `NT$ ${minPrice} 起`;
         }
 
         grid.innerHTML += `
@@ -474,7 +494,7 @@
             </div>
             <div class="product-info">
               <div class="product-title">${item.productName}</div>
-              <div class="product-price">NT$ ${item.price} 起</div>
+              <div class="product-price">${priceText}</div>
               <button type="button" class="product-card-btn" onclick="openModal('${item.productName}')">選擇規格 / 瀏覽</button>
             </div>
           </div>
