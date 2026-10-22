@@ -70,13 +70,6 @@ export default async function handler(req, res) {
                 saleType = p[typeKey].select.name;
               }
 
-              // 抓取收單日期
-              let deadline = '';
-              const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止'));
-              if (dateKey && p[dateKey]?.type === 'date' && p[dateKey].date?.start) {
-                deadline = p[dateKey].date.start;
-              }
-
               // 是否需訂金
               let needDeposit = false;
               const depositKey = Object.keys(p).find(k => k.includes('訂金') || k.includes('押金'));
@@ -133,7 +126,14 @@ export default async function handler(req, res) {
       if (titleKey && p[titleKey]?.title?.[0]) {
         styleName = p[titleKey].title.map(t => t.plain_text).join('') || '圖片款';
       }
-
+      
+      // 抓取收單日期
+      let deadline = '';
+      const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止'));
+      if (dateKey && p[dateKey]?.type === 'date' && p[dateKey].date?.start) {
+        deadline = p[dateKey].date.start;
+      }
+      
       // 抓取價格 (number)
       let price = 0;
       const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
