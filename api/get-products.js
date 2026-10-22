@@ -9,45 +9,35 @@ export default async function handler(req, res) {
 
   try {
     const notionToken = process.env.NOTION_TOKEN;
-    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       // 主商品表 A表
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   // 款式明細表 C表
+    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   
 
     if (!notionToken || !productDetailDbId) {
-      return res.status(500).json({ success: false, error: '伺服器未設定 Notion 環境變數' });
+      return res.status(500).json({ success: false, error: '缺少 Notion 環境變數' });
     }
 
     const notion = new Client({ auth: notionToken });
 
-    // 1. 查詢 A表（主商品表），精準讀取 status 屬性
+    // 1. 查詢 A 表
     let validAMapById = {}; 
     if (productDbId) {
       try {
         const aRes = await notion.databases.query({ database_id: productDbId });
+        console.log(`[A表] 抓到的主商品數量: ${aRes.results.length}`);
+        
         aRes.results.forEach(page => {
           const p = page.properties;
-
           let isEnded = false;
-          // 尋找型態為 status 的欄位（或是包含狀態名稱的欄位）
+          
           const statusKey = Object.keys(p).find(k => p[k].type === 'status' || k.includes('狀態'));
-          if (statusKey) {
-            const statusProp = p[statusKey];
-            let statusVal = '';
-            
-            if (statusProp.type === 'status') {
-              statusVal = statusProp.status?.name || '';
-            } else if (statusProp.type === 'select') {
-              statusVal = statusProp.select?.name || '';
-            } else if (statusProp.type === 'rich_text') {
-              statusVal = statusProp.rich_text.map(t => t.plain_text).join('') || '';
-            }
-            
-            // 只有當狀態明確寫著「已結束」時才排除
+          if (statusKey && p[statusKey].status) {
+            const statusVal = p[statusKey].status.name || '';
+            console.log(`[A表狀態] ${page.id} 狀態值為: "${statusVal}"`);
             if (statusVal.trim() === '已結束') {
-              isEnded = true; 
+              isEnded = true;
             }
           }
 
-          // 如果沒有被標記已結束，就將其記錄下來
           if (!isEnded) {
             const titleKey = Object.keys(p).find(k => p[k].type === 'title');
             if (titleKey && p[titleKey].title?.[0]) {
@@ -59,31 +49,32 @@ export default async function handler(req, res) {
           }
         });
       } catch (e) {
-        console.log('A表查詢警告:', e.message);
+        console.log('[A表查詢錯誤]:', e.message);
       }
     }
 
-    // 2. 查詢 C表（款式明細表）
+    // 2. 查詢 C 表
     const cRes = await notion.databases.query({ database_id: productDetailDbId });
+    console.log(`[C表] 抓到的款式明細數量: ${cRes.results.length}`);
+    
     const products = [];
 
-    cRes.results.forEach(page => {
+    cRes.results.forEach((page, idx) => {
       const p = page.properties;
+      console.log(`--- 檢查 C表第 ${idx+1} 筆資料的欄位 ---`, Object.keys(p));
 
-      // 取得主商品名稱（透過 Relation 連結到 A表）
       let parentName = '';
       const relKey = Object.keys(p).find(k => p[k].type === 'relation');
       
       if (relKey && p[relKey].relation.length > 0) {
         const relId = p[relKey].relation[0].id;
-        // 如果 A表有正常抓到，且狀態不是已結束
         if (Object.keys(validAMapById).length === 0 || validAMapById[relId]) {
-          parentName = validAMapById[relId] || '';
+          parentName = validAMapById[relId] || '主商品';
         } else {
-          return; // 該主商品在 A表被標記為「已結束」，跳過此筆 C 表明細
+          console.log(`[過濾] 該筆明細因 A表狀態為已結束而被排除`);
+          return; 
         }
       } else {
-        // 若沒有關聯，嘗試從 C 表直接抓文字名稱
         const prodKey = Object.keys(p).find(k => k.includes('商品') || k.includes('品名') || k.includes('名稱') || p[k].type === 'title');
         if (prodKey) {
           const prop = p[prodKey];
@@ -94,18 +85,14 @@ export default async function handler(req, res) {
         if (!parentName) parentName = '精選商品';
       }
 
-      if (!parentName) return;
-
-      // 取得款式名稱
       let styleName = '標準款式';
-      const styleKey = Object.keys(p).find(k => k[k].type === 'title' || k.includes('款式') || k.includes('Spec'));
+      const styleKey = Object.keys(p).find(k => p[k].type === 'title' || k.includes('款式') || k.includes('Spec'));
       if (styleKey && p[styleKey]) {
         const prop = p[styleKey];
         if (prop.type === 'title') styleName = prop.title.map(t => t.plain_text).join('') || '標準款式';
         else if (prop.type === 'rich_text') styleName = prop.rich_text.map(t => t.plain_text).join('') || '標準款式';
       }
 
-      // 抓取單價 (強制抓取 number 屬性)
       let price = 0;
       const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
       if (priceKey) {
@@ -115,26 +102,19 @@ export default async function handler(req, res) {
         if (anyNumKey) price = p[anyNumKey].number || 0;
       }
 
-      // 抓取圖片 (Files)
-      const imgKey = Object.keys(p).find(k => k[k].type === 'files' || k.includes('圖'));
       let imageUrl = '';
+      const imgKey = Object.keys(p).find(k => p[k].type === 'files' || k.includes('圖'));
       if (imgKey && p[imgKey].files?.[0]) {
         const fileObj = p[imgKey].files[0];
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
       }
 
-      // 商品分類 / 地區標籤
       let category = '全部';
-      const catKey = Object.keys(p).find(k => k.includes('地區') || k.includes('分類') || k.includes('Tag') || k.includes('分區') || p[k].type === 'select');
+      const catKey = Object.keys(p).find(k => k.includes('地區') || k.includes('分類') || k.includes('Tag') || p[k].type === 'select');
       if (catKey) {
         const catProp = p[catKey];
-        if (catProp.type === 'select') {
-          category = catProp.select?.name || '全部';
-        } else if (catProp.type === 'multi_select' && catProp.multi_select.length > 0) {
-          category = catProp.multi_select[0].name || '全部';
-        } else if (catProp.type === 'rich_text') {
-          category = catProp.rich_text.map(t => t.plain_text).join('') || '全部';
-        }
+        if (catProp.type === 'select') category = catProp.select?.name || '全部';
+        else if (catProp.type === 'multi_select' && catProp.multi_select.length > 0) category = catProp.multi_select[0].name || '全部';
       }
 
       products.push({
@@ -146,6 +126,7 @@ export default async function handler(req, res) {
       });
     });
 
+    console.log(`[成功組裝] 準備回傳前端的商品數: ${products.length}`);
     return res.status(200).json({ success: true, products });
 
   } catch (error) {
