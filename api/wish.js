@@ -9,7 +9,6 @@ export default async function handler(req, res) {
 
   try {
     const notionToken = process.env.NOTION_TOKEN;
-    // 這裡可以直接寫入您的訂單表 DATABASE_ID，或另外開一個許願專用 DB ID
     const dbId = process.env.WISH_DATABASE_ID || process.env.DATABASE_ID;
 
     if (!notionToken || !dbId) {
@@ -17,38 +16,49 @@ export default async function handler(req, res) {
     }
 
     const notion = new Client({ auth: notionToken });
-    const { nickname, contactInfo, productName, location, budget, note } = req.body;
+    const { nickname, contactInfo, productName, location, budget, imageUrl } = req.body;
 
     if (!productName) {
       return res.status(400).json({ success: false, error: '請填寫想許願的商品名稱' });
     }
 
-    // 寫入 Notion 資料庫
+    const properties = {
+      "買家暱稱": {
+        title: [{ text: { content: nickname || '匿名許願者' } }]
+      },
+      "聯絡方式": {
+        rich_text: [{ text: { content: contactInfo || '未填寫' } }]
+      },
+      "商品名稱": {
+        rich_text: [{ text: { content: `✨ [許願] ${productName}` } }]
+      },
+      "規格款式": {
+        rich_text: [{ text: { content: `地點：${location || '未指定'} | 預算：${budget || '無上限'}` } }]
+      },
+      "備註": {
+        rich_text: [{ text: { content: '粉絲許願單（附參考圖）' } }]
+      },
+      "出貨狀態": {
+        status: { name: '備貨中' }
+      },
+      "付款狀態": {
+        status: { name: '未付款' }
+      }
+    };
+
+    // 如果使用者有上傳參考圖片，一併寫入 Notion 檔案欄位
+    if (imageUrl) {
+      properties["商品圖片"] = {
+        files: [{
+          name: "wish_reference.jpg",
+          external: { url: imageUrl }
+        }]
+      };
+    }
+
     await notion.pages.create({
       parent: { database_id: dbId },
-      properties: {
-        "買家暱稱": {
-          title: [{ text: { content: nickname || '匿名許願者' } }]
-        },
-        "聯絡方式": {
-          rich_text: [{ text: { content: contactInfo || '未填寫' } }]
-        },
-        "商品名稱": {
-          rich_text: [{ text: { content: `✨ [許願] ${productName}` } }]
-        },
-        "規格款式": {
-          rich_text: [{ text: { content: `地點：${location || '未指定'} | 預算：${budget || '無上限'}` } }]
-        },
-        "備註": {
-          rich_text: [{ text: { content: note || '粉絲許願' } }]
-        },
-        "出貨狀態": {
-          status: { name: '備貨中' }
-        },
-        "付款狀態": {
-          status: { name: '未付款' }
-        }
-      }
+      properties: properties
     });
 
     return res.status(200).json({ success: true, message: '許願成功！' });
