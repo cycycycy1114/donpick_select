@@ -18,7 +18,7 @@ export default async function handler(req, res) {
 
     const notion = new Client({ auth: notionToken });
 
-    // 1. 查詢 A表（主商品表），只有當狀態明確寫著「已結束」時才排除
+    // 1. 查詢 A表（主商品表），精準讀取 status 屬性
     let validAMapById = {}; 
     if (productDbId) {
       try {
@@ -27,18 +27,21 @@ export default async function handler(req, res) {
           const p = page.properties;
 
           let isEnded = false;
-          const statusKey = Object.keys(p).find(k => k.includes('狀態') || p[k].type === 'status' || p[k].type === 'select');
+          // 尋找型態為 status 的欄位（或是包含狀態名稱的欄位）
+          const statusKey = Object.keys(p).find(k => p[k].type === 'status' || k.includes('狀態'));
           if (statusKey) {
+            const statusProp = p[statusKey];
             let statusVal = '';
-            if (p[statusKey].type === 'status') {
-              statusVal = p[statusKey].status?.name || '';
-            } else if (p[statusKey].type === 'select') {
-              statusVal = p[statusKey].select?.name || '';
-            } else if (p[statusKey].type === 'rich_text') {
-              statusVal = p[statusKey].rich_text.map(t => t.plain_text).join('') || '';
+            
+            if (statusProp.type === 'status') {
+              statusVal = statusProp.status?.name || '';
+            } else if (statusProp.type === 'select') {
+              statusVal = statusProp.select?.name || '';
+            } else if (statusProp.type === 'rich_text') {
+              statusVal = statusProp.rich_text.map(t => t.plain_text).join('') || '';
             }
             
-            // 嚴格比對：明確寫著「已結束」才排除
+            // 只有當狀態明確寫著「已結束」時才排除
             if (statusVal.trim() === '已結束') {
               isEnded = true; 
             }
@@ -60,7 +63,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. 查詢 C表（款式明細表），抓取款式、單價、圖片等
+    // 2. 查詢 C表（款式明細表）
     const cRes = await notion.databases.query({ database_id: productDetailDbId });
     const products = [];
 
@@ -73,7 +76,7 @@ export default async function handler(req, res) {
       
       if (relKey && p[relKey].relation.length > 0) {
         const relId = p[relKey].relation[0].id;
-        // 如果 A表有正常抓到，且不在排除名單內
+        // 如果 A表有正常抓到，且狀態不是已結束
         if (Object.keys(validAMapById).length === 0 || validAMapById[relId]) {
           parentName = validAMapById[relId] || '';
         } else {
@@ -108,7 +111,7 @@ export default async function handler(req, res) {
       if (priceKey) {
         price = p[priceKey].number || 0;
       } else {
-        const anyNumKey = Object.keys(p).find(k => k[k].type === 'number');
+        const anyNumKey = Object.keys(p).find(k => p[k].type === 'number');
         if (anyNumKey) price = p[anyNumKey].number || 0;
       }
 
@@ -122,14 +125,15 @@ export default async function handler(req, res) {
 
       // 商品分類 / 地區標籤
       let category = '全部';
-      const catKey = Object.keys(p).find(k => k.includes('地區') || k.includes('分類') || k.includes('Tag') || k.includes('分區'));
+      const catKey = Object.keys(p).find(k => k.includes('地區') || k.includes('分類') || k.includes('Tag') || k.includes('分區') || p[k].type === 'select');
       if (catKey) {
-        if (p[catKey].type === 'select') {
-          category = p[catKey].select?.name || '全部';
-        } else if (p[catKey].type === 'multi_select' && p[catKey].multi_select.length > 0) {
-          category = p[catKey].multi_select[0].name || '全部';
-        } else if (p[catKey].type === 'rich_text') {
-          category = p[catKey].rich_text.map(t => t.plain_text).join('') || '全部';
+        const catProp = p[catKey];
+        if (catProp.type === 'select') {
+          category = catProp.select?.name || '全部';
+        } else if (catProp.type === 'multi_select' && catProp.multi_select.length > 0) {
+          category = catProp.multi_select[0].name || '全部';
+        } else if (catProp.type === 'rich_text') {
+          category = catProp.rich_text.map(t => t.plain_text).join('') || '全部';
         }
       }
 
