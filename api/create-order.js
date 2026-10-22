@@ -10,8 +10,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { nickname, contactType, contactInfo, delivery, items } = req.body || {};
-    const dbId = process.env.DATABASE_ID;
+    const { nickname, contactType, contactInfo, delivery, note, items } = req.body || {};
+    const dbId = process.env.DATABASE_ID; // 預定訂單表 Database ID
 
     if (!dbId) {
       return res.status(500).json({ success: false, error: "缺少 DATABASE_ID 環境變數" });
@@ -50,7 +50,6 @@ export default async function handler(req, res) {
     let totalGrandPrice = 0;
     let summaryItemsText = '';
 
-    // 迴圈將購物車多筆商品分別寫入 Notion
     for (const item of items) {
       const properties = {};
 
@@ -63,6 +62,9 @@ export default async function handler(req, res) {
       setProp(properties, ['單價', '價格', 'Price'], item.price);
       setProp(properties, ['總金額', '總價', '合計', 'Total Price', '金額'], item.totalPrice);
       setProp(properties, ['取貨方式', '寄送方式', '物流', 'Delivery'], delivery);
+      
+      // 📝 寫入訂單備註 / 許願
+      setProp(properties, ['備註', '訂單備註', '備註欄位', '許願', 'Note', 'Remark'], note || '');
       
       setProp(properties, ['物流狀態', '出貨狀態'], '備貨中');
       setProp(properties, ['金流狀態', '付款狀態'], '未付款');
@@ -81,7 +83,7 @@ export default async function handler(req, res) {
       summaryItemsText += `• ${item.product} (${item.spec}) x ${item.quantity} ($${item.totalPrice})\n`;
     }
 
-    // 發送 Telegram 即時通知
+    // 發送 Telegram 通知（包含備註）
     try {
       const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
       const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -92,6 +94,7 @@ export default async function handler(req, res) {
                         `👤 買家：${nickname || '未命名'}\n` +
                         `📱 聯絡：[${contactType}] ${contactInfo}\n` +
                         `🚚 取貨：${delivery || '未填寫'}\n` +
+                        `📝 備註：${note || '無'}\n` +
                         `💰 總金額：$ ${totalGrandPrice}\n` +
                         `------------------\n` +
                         `📦 購買品項：\n${summaryItemsText}`;
