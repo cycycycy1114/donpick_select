@@ -28,23 +28,28 @@ export default async function handler(req, res) {
           const p = page.properties;
           let isEnded = false;
           
-          // 檢查狀態是否為「已結束」
-          const statusKey = Object.keys(p).find(k => k[k].type === 'status' || k.includes('狀態'));
-          if (statusKey && p[statusKey]?.status) {
-            const statusVal = p[statusKey].status.name || '';
-            if (statusVal.trim() === '已結束') isEnded = true;
-          }
+          // 檢查狀態是否為「已結束」（只要包含「狀態」或型態為 status）
+          Object.keys(p).forEach(k => {
+            const prop = p[k];
+            if (prop.type === 'status' && prop.status?.name === '已結束') isEnded = true;
+            if (k.includes('狀態') && prop.select?.name === '已結束') isEnded = true;
+          });
 
           if (!isEnded) {
-            const titleKey = Object.keys(p).find(k => k[k].type === 'title');
-            if (titleKey && p[titleKey]?.title?.[0]) {
-              const name = p[titleKey].title.map(t => t.plain_text).join('');
-              if (name) {
-                // 🎯 支援 A 表「商品分類」（支援 multi_select、select、rich_text）
-                let categories = ['伴手禮'];
-                const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k].type === 'multi_select' || p[k].type === 'select');
-                if (catKey && p[catKey]) {
-                  const prop = p[catKey];
+            // 抓取主商品名稱 (title)
+            let name = '';
+            Object.keys(p).forEach(k => {
+              if (p[k].type === 'title' && p[k].title?.[0]) {
+                name = p[k].title.map(t => t.plain_text).join('');
+              }
+            });
+
+            if (name) {
+              // 🎯 智慧抓取分類（支援 multi_select、select、rich_text）
+              let categories = ['伴手禮'];
+              Object.keys(p).forEach(k => {
+                const prop = p[k];
+                if ((k.includes('分類') || k.includes('地區') || k.includes('Tag') || prop.type === 'multi_select' || prop.type === 'select')) {
                   if (prop.type === 'multi_select' && prop.multi_select?.length > 0) {
                     categories = prop.multi_select.map(item => item.name);
                   } else if (prop.type === 'select' && prop.select?.name) {
@@ -54,45 +59,53 @@ export default async function handler(req, res) {
                     if (txt) categories = [txt];
                   }
                 }
+              });
 
-                // 🎯 抓取 A 表新增的文字屬性「內容介紹」
-                let description = '';
-                const descKey = Object.keys(p).find(k => k.includes('內容介紹') || k.includes('介紹') || k.includes('說明') || p[k].type === 'rich_text');
-                if (descKey && p[descKey]?.rich_text) {
-                  description = p[descKey].rich_text.map(t => t.plain_text).join('');
+              // 🎯 智慧抓取「內容介紹」
+              let description = '';
+              Object.keys(p).forEach(k => {
+                const prop = p[k];
+                if ((k.includes('介紹') || k.includes('說明') || k.includes('內容')) && prop.type === 'rich_text' && prop.rich_text?.[0]) {
+                  description = prop.rich_text.map(t => t.plain_text).join('');
                 }
+              });
 
-                // 抓取現貨/預購
-                let saleType = '預購';
-                const typeKey = Object.keys(p).find(k => k.includes('類型') || k.includes('現貨') || k.includes('狀態'));
-                if (typeKey && p[typeKey]?.type === 'select') {
-                  saleType = p[typeKey].select?.name || '預購';
+              // 抓取現貨/預購
+              let saleType = '預購';
+              Object.keys(p).forEach(k => {
+                const prop = p[k];
+                if ((k.includes('類型') || k.includes('現貨') || k.includes('狀態')) && prop.type === 'select' && prop.select?.name) {
+                  saleType = prop.select.name;
                 }
+              });
 
-                // 抓取收單日期
-                let deadline = '';
-                const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k].type === 'date');
-                if (dateKey && p[dateKey]?.date) {
-                  deadline = p[dateKey].date.start || '';
+              // 抓取收單日期
+              let deadline = '';
+              Object.keys(p).forEach(k => {
+                const prop = p[k];
+                if ((k.includes('收單') || k.includes('日期') || k.includes('截止')) && prop.type === 'date' && prop.date?.start) {
+                  deadline = prop.date.start;
                 }
+              });
 
-                // 是否需訂金
-                let needDeposit = false;
-                const depositKey = Object.keys(p).find(k => k.includes('訂金') || k.includes('押金'));
-                if (depositKey && p[depositKey]) {
-                  if (p[depositKey].type === 'checkbox') needDeposit = p[depositKey].checkbox;
-                  else if (p[depositKey].type === 'select') needDeposit = (p[depositKey].select?.name === '是' || p[depositKey].select?.name === '需訂金');
+              // 是否需訂金
+              let needDeposit = false;
+              Object.keys(p).forEach(k => {
+                const prop = p[k];
+                if ((k.includes('訂金') || k.includes('押金'))) {
+                  if (prop.type === 'checkbox') needDeposit = prop.checkbox;
+                  if (prop.type === 'select' && (prop.select?.name === '是' || prop.select?.name === '需訂金')) needDeposit = true;
                 }
+              });
 
-                validAMap[page.id] = {
-                  name,
-                  categories,
-                  description,
-                  saleType,
-                  deadline,
-                  needDeposit
-                };
-              }
+              validAMap[page.id] = {
+                name,
+                categories,
+                description,
+                saleType,
+                deadline,
+                needDeposit
+              };
             }
           }
         });
@@ -109,47 +122,60 @@ export default async function handler(req, res) {
       const p = page.properties;
 
       let parentInfo = null;
-      const relKey = Object.keys(p).find(k => k[k].type === 'relation');
-      
-      if (relKey && p[relKey]?.relation?.length > 0) {
-        const relId = p[relKey].relation[0].id;
-        if (validAMap[relId]) {
-          parentInfo = validAMap[relId];
-        } else {
-          return; 
+      let relFound = false;
+
+      // 智慧尋找關聯欄位 (relation)
+      Object.keys(p).forEach(k => {
+        const prop = p[k];
+        if (prop.type === 'relation' && prop.relation?.length > 0) {
+          const relId = prop.relation[0].id;
+          if (validAMap[relId]) {
+            parentInfo = validAMap[relId];
+            relFound = true;
+          }
         }
-      } else {
+      });
+
+      // 如果找不到關聯，但 A 表是空的，則給予預設值防呆
+      if (!relFound) {
         if (Object.keys(validAMap).length === 0) {
           parentInfo = { name: '精選商品', categories: ['伴手禮'], description: '', saleType: '預購', deadline: '', needDeposit: false };
         } else {
-          return; 
+          return; // 若有 A 表但沒對應到關聯，則跳過
         }
       }
 
-      // 抓取 C 表的款式名稱 (Title 屬性)
+      // 🎯 抓取 C 表的款式名稱 (Title 屬性，或包含「款式」、「規格」的欄位)
       let styleName = '標準款式';
-      const titleKey = Object.keys(p).find(k => k[k].type === 'title');
-      if (titleKey && p[titleKey]?.title?.[0]) {
-        styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
-      }
+      Object.keys(p).forEach(k => {
+        const prop = p[k];
+        if (prop.type === 'title' && prop.title?.[0]) {
+          styleName = prop.title.map(t => t.plain_text).join('') || '標準款式';
+        } else if ((k.includes('款式') || k.includes('規格') || k.includes('Spec')) && prop.type === 'rich_text' && prop.rich_text?.[0]) {
+          styleName = prop.rich_text.map(t => t.plain_text).join('') || '標準款式';
+        }
+      });
 
-      // 抓取價格
+      // 抓取價格 (number)
       let price = 0;
-      const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
-      if (priceKey && p[priceKey]?.number !== undefined) {
-        price = p[priceKey].number || 0;
-      } else {
-        const anyNumKey = Object.keys(p).find(k => p[k].type === 'number');
-        if (anyNumKey && p[anyNumKey]?.number !== undefined) price = p[anyNumKey].number || 0;
-      }
+      Object.keys(p).forEach(k => {
+        const prop = p[k];
+        if (prop.type === 'number' && prop.number !== undefined) {
+          if (k.includes('價格') || k.includes('單價') || k.includes('Price') || price === 0) {
+            price = prop.number || 0;
+          }
+        }
+      });
 
-      // 抓取圖片
+      // 抓取圖片 (files)
       let imageUrl = '';
-      const imgKey = Object.keys(p).find(k => k.type === 'files' || k.includes('圖'));
-      if (imgKey && p[imgKey]?.files?.[0]) {
-        const fileObj = p[imgKey].files[0];
-        imageUrl = fileObj.file?.url || fileObj.external?.url || '';
-      }
+      Object.keys(p).forEach(k => {
+        const prop = p[k];
+        if (prop.type === 'files' && prop.files?.[0]) {
+          const fileObj = prop.files[0];
+          imageUrl = fileObj.file?.url || fileObj.external?.url || '';
+        }
+      });
 
       products.push({
         productName: parentInfo.name,
