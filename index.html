@@ -70,6 +70,19 @@
     
     .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
 
+    /* 公告欄樣式 */
+    .announcement-banner {
+      background: #fbf5ee;
+      border: 1px solid #ebd5cd;
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #7d403a;
+    }
+
     .stats-bar {
       display: flex;
       justify-content: space-between;
@@ -249,6 +262,12 @@
   </header>
 
   <div class="container">
+    <!-- 📢 公告欄區塊 -->
+    <div class="announcement-banner" id="announcementBanner">
+      <div style="font-weight: bold; margin-bottom: 4px;">📢 最新公告：</div>
+      <div id="announcementList"></div>
+    </div>
+
     <div class="stats-bar">
       <div>🔥 歡迎來到 DonPick 選物小站！</div>
       <div>👀 本站總瀏覽人次：<strong id="visitorCount" style="color: var(--milk-red);">載入中...</strong></div>
@@ -347,7 +366,7 @@
     </div>
   </div>
 
-  <!-- 查詢與許願 Drawer -->
+  <!-- 查詢訂單 Drawer -->
   <div class="drawer" id="queryDrawer">
     <div class="drawer-header"><span>🔍 查詢您的歷史訂單</span><span style="cursor: pointer;" onclick="closeQueryDrawer()">×</span></div>
     <div class="drawer-body">
@@ -359,6 +378,7 @@
     </div>
   </div>
 
+  <!-- 許願 Drawer -->
   <div class="drawer-overlay" id="wishDrawer" onclick="closeDrawerOnOutside(event, 'wishDrawer')">
     <div class="modal-card">
       <span onclick="closeWishDrawer()" class="modal-close">×</span>
@@ -394,8 +414,15 @@
       try {
         const res = await fetch('/api/get-products');
         const data = await res.json();
-        if (data.success && data.products) {
-          allProducts = data.products;
+        if (data.success) {
+          if (data.announcements && data.announcements.length > 0) {
+            const banner = document.getElementById('announcementBanner');
+            const list = document.getElementById('announcementList');
+            list.innerHTML = data.announcements.map(a => `• ${a}`).join('<br>');
+            banner.style.display = 'block';
+          }
+
+          allProducts = data.products || [];
           buildCategories();
           renderProducts('全部');
         } else {
@@ -410,18 +437,18 @@
       const bar = document.getElementById('categoryBar');
       if (!bar) return;
 
-      // 收集所有未結單商品的分類
       const rawCats = [];
       allProducts.forEach(p => {
-        if (p.saleType !== '已結束' && p.category && p.category !== '全部') {
-          rawCats.push(p.category.trim());
+        if (p.saleType !== '已結束' && p.categories && Array.isArray(p.categories)) {
+          p.categories.forEach(c => {
+            if (c && c.trim() !== '') rawCats.push(c.trim());
+          });
         }
       });
 
       const uniqueRawCats = [...new Set(rawCats)];
       uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
-      // 分頁籤順序：「全部」、各未結單分類、最後加上「已結單」
       const categories = ['全部', ...uniqueRawCats, '已結單'];
       
       bar.innerHTML = '';
@@ -450,7 +477,7 @@
       } else if (cat === '全部') {
         filtered = allProducts.filter(p => p.saleType !== '已結束');
       } else {
-        filtered = allProducts.filter(p => p.saleType !== '已結束' && p.category === cat);
+        filtered = allProducts.filter(p => p.saleType !== '已結束' && p.categories && p.categories.includes(cat));
       }
 
       if (filtered.length === 0) {
@@ -458,7 +485,6 @@
         return;
       }
 
-      // 同品項合併邏輯
       const productGroups = {};
       filtered.forEach(p => {
         const name = p.productName || '精選商品';
@@ -583,7 +609,6 @@
     function closeModal() { document.getElementById('specModal').style.display = 'none'; }
     function closeModalOnOutside(e) { if (e.target.id === 'specModal') closeModal(); }
     
-    // 圖片燈箱控制
     function openLightbox(url) {
       document.getElementById('lightboxImg').src = url;
       document.getElementById('lightboxModal').style.display = 'flex';
@@ -664,10 +689,14 @@
     }
 
     function removeFromCart(index) { cart.splice(index, 1); renderCart(); }
+    
     function openCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'flex'; }
     function closeCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'none'; }
+    
+    // 🎯 確保查單 Drawer 正常開啟
     function openQueryDrawer() { document.getElementById('queryDrawer').style.display = 'flex'; }
     function closeQueryDrawer() { document.getElementById('queryDrawer').style.display = 'none'; }
+    
     function openWishDrawer() { document.getElementById('wishDrawer').style.display = 'flex'; }
     function closeWishDrawer() { document.getElementById('wishDrawer').style.display = 'none'; }
     function closeDrawerOnOutside(e, id) { if (e.target.id === id) document.getElementById(id).style.display = 'none'; }
