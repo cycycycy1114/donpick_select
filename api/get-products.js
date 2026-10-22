@@ -9,8 +9,8 @@ export default async function handler(req, res) {
 
   try {
     const notionToken = process.env.NOTION_TOKEN;
-    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       // 主商品表 A表
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   // 款式明細表 C表
+    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;        // 主商品表 A表
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                    // 款式明細表 C表
 
     if (!notionToken || !productDetailDbId) {
       return res.status(500).json({ success: false, error: '伺服器未設定 Notion 環境變數' });
@@ -28,7 +28,6 @@ export default async function handler(req, res) {
           const p = page.properties || {};
           let isEnded = false;
           
-          // 檢查 A 表狀態是否為「已結束」
           const statusKey = Object.keys(p).find(k => p[k]?.type === 'status' || k.includes('狀態'));
           if (statusKey && p[statusKey]?.status) {
             const statusVal = p[statusKey].status.name || '';
@@ -36,7 +35,6 @@ export default async function handler(req, res) {
           }
 
           if (!isEnded) {
-            // 抓取主商品名稱 (title)
             let name = '';
             const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
             if (titleKey && p[titleKey]?.title?.[0]) {
@@ -44,9 +42,9 @@ export default async function handler(req, res) {
             }
 
             if (name) {
-              // 🎯 抓取 multi_select 格式的「商品分類」
+              // 🎯 抓取分類
               let categories = ['伴手禮'];
-              const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k]?.type === 'multi_select');
+              const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k]?.type === 'multi_select' || p[k]?.type === 'select');
               if (catKey && p[catKey]) {
                 const prop = p[catKey];
                 if (prop.type === 'multi_select' && prop.multi_select?.length > 0) {
@@ -56,21 +54,19 @@ export default async function handler(req, res) {
                 }
               }
 
-              // 🎯 抓取文字屬性「內容介紹」
               let description = '';
               const descKey = Object.keys(p).find(k => k.includes('內容介紹') || k.includes('介紹') || k.includes('說明'));
               if (descKey && p[descKey]?.rich_text?.[0]) {
                 description = p[descKey].rich_text.map(t => t.plain_text).join('');
               }
 
-              // 抓取 A 表備用收單日期
+              // 🎯 萬用抓取 A 表收單日期
               let aDeadline = '';
-              const dateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k]?.type === 'date'));
-              if (dateKey && p[dateKey]?.date) {
-                aDeadline = p[dateKey].date.start || '';
+              const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止') || k.includes('Deadline') || p[k]?.type === 'date');
+              if (dateKey && p[dateKey]?.date?.start) {
+                aDeadline = p[dateKey].date.start;
               }
 
-              // 是否需訂金
               let needDeposit = false;
               const depositKey = Object.keys(p).find(k => k.includes('訂金') || k.includes('押金'));
               if (depositKey && p[depositKey]) {
@@ -111,7 +107,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // 🛡️ 防呆：若 C 表沒對應到 A 表，提供預設主商品資訊
       if (!parentInfo) {
         parentInfo = {
           name: '精選預購商品',
@@ -122,21 +117,19 @@ export default async function handler(req, res) {
         };
       }
 
-      // 🎯 抓取 C 表的款式名稱 (Title 屬性)
       let styleName = '標準款式';
       const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
       if (titleKey && p[titleKey]?.title?.[0]) {
         styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
       }
 
-      // 🎯 【優先從 C 表抓取收單日期】若 C 表沒填，則自動採用 A 表的收單日期
+      // 🎯 優先從 C 表抓日期，若無則用 A 表的日期
       let deadline = parentInfo.deadline;
-      const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止')) && p[k]?.type === 'date');
+      const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止') || k.includes('Deadline')) && p[k]?.type === 'date');
       if (cDateKey && p[cDateKey]?.date?.start) {
         deadline = p[cDateKey].date.start;
       }
 
-      // 抓取價格 (number)
       let price = 0;
       const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k]?.type === 'number');
       if (priceKey && p[priceKey]?.number !== undefined) {
@@ -146,7 +139,6 @@ export default async function handler(req, res) {
         if (anyNumKey && p[anyNumKey]?.number !== undefined) price = p[anyNumKey].number || 0;
       }
 
-      // 抓取圖片 (files)
       let imageUrl = '';
       const imgKey = Object.keys(p).find(k => p[k]?.type === 'files' || k.includes('圖'));
       if (imgKey && p[imgKey]?.files?.[0]) {
