@@ -707,7 +707,7 @@ async function searchOrders() {
           return;
         }
 
-        // 🎯 計算所有訂單加總的「總尚未結清金額」與「總消費金額」
+        // 計算總消費與總尚未結清
         let grandTotalAll = 0;
         let totalUnpaidAll = 0;
 
@@ -716,7 +716,6 @@ async function searchOrders() {
           totalUnpaidAll += (ord.unpaidTotal || 0);
         });
 
-        // 🎯 最上方顯示總結算看板
         let htmlContent = `
           <div style="background: linear-gradient(135deg, #fffbe6, #fff1b8); border: 1px solid #ffe58f; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #8c6b00; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
             <div><strong>📊 買家查詢結算：</strong>共找到 ${orders.length} 筆訂單</div>
@@ -728,11 +727,24 @@ async function searchOrders() {
           <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">訂單明細列表：</div>
         `;
 
-        // 逐筆組裝訂單卡片
         orders.forEach(ord => {
           let itemsHtml = '';
           ord.items.forEach(item => {
-            itemsHtml += `<div style="padding: 3px 0; border-bottom: 1px dashed #eee;">• <strong>${item.product}</strong> / 規格：<span style="color: #2eaadc; font-weight: bold;">${item.spec}</span> x ${item.quantity} (<b>$${item.price}</b>)</div>`;
+            // 🎯 圖片小縮圖標籤
+            const imgThumbTag = item.imageUrl 
+              ? `<img src="${item.imageUrl}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: #eee; cursor: zoom-in;" onclick="openLightbox('${item.imageUrl}')">`
+              : `<div style="width: 36px; height: 36px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #999;">無圖</div>`;
+
+            itemsHtml += `
+              <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed #eee;">
+                ${imgThumbTag}
+                <div style="flex-grow: 1;">
+                  <strong>${item.product}</strong><br>
+                  <span style="color:#666; font-size:12px;">規格：<span style="color: #2eaadc; font-weight: bold;">${item.spec}</span> x ${item.quantity}</span>
+                </div>
+                <div style="color: #2eaadc; font-weight: bold;">$${item.price}</div>
+              </div>
+            `;
           });
 
           htmlContent += `
@@ -741,7 +753,7 @@ async function searchOrders() {
                 <span style="font-weight: bold; color: #2eaadc; font-size: 14px;">👤 ${ord.nickname} (${ord.contactInfo})</span>
                 <span style="color: #888; font-size: 12px;">📅 ${ord.createdAt}</span>
               </div>
-              <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px; padding-left: 6px;">${itemsHtml}</div></div>
+              <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px;">${itemsHtml}</div></div>
               <div style="display: flex; justify-content: space-between; background: #fcfcfc; padding: 8px; border-radius: 6px; margin-bottom: 6px;">
                 <span><strong>💰 該筆總金額：</strong>$${ord.grandTotal}</span>
                 <span style="color: #d32f2f; font-weight: bold;">⚠️ 尚未結清：$${ord.unpaidTotal}</span>
