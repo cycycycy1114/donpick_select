@@ -12,10 +12,10 @@
       color: #37352f;
       margin: 0;
       padding: 16px;
-      padding-bottom: 80px; /* 預留給底部浮動購物車按鈕的空間 */
+      padding-bottom: 80px;
     }
     .container {
-      max-width: 800px;
+      max-width: 1000px;
       margin: 0 auto;
     }
     header {
@@ -25,6 +25,7 @@
       padding: 18px;
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: relative;
     }
     header h1 {
       margin: 0 0 6px;
@@ -36,39 +37,75 @@
       font-size: 13px;
       color: #666;
     }
-
-    /* 商品分類切換按鈕列 (Tabs) */
-    .category-tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      overflow-x: auto;
-      padding-bottom: 4px;
+    .order-query-btn {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      color: #333;
     }
-    .cat-btn {
-      padding: 6px 14px;
-      border: 1px solid #2eaadc;
-      border-radius: 20px;
+    .order-query-btn:hover { background: #e4e4e4; }
+
+    /* 左右排版：左側分類選單，右側商品主畫面 */
+    .main-layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .sidebar {
+      width: 200px;
+      background: white;
+      padding: 14px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      flex-shrink: 0;
+    }
+    .sidebar h4 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: #333;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+    }
+    .sidebar-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 10px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
       font-size: 13px;
       cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
+      margin-bottom: 4px;
+      color: #555;
+      font-weight: 500;
+    }
+    .sidebar-btn:hover {
+      background: #f0f7fb;
+      color: #2eaadc;
+    }
+    .sidebar-btn.active {
+      background: #2eaadc;
+      color: white;
+      font-weight: bold;
     }
 
-    /* 大型網拍風格：商品卡片網格 (Product Grid) */
-    .catalog-title {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .content-area {
+      flex-grow: 1;
     }
+
+    /* 商品網格牆 */
     .product-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
       gap: 16px;
-      margin-bottom: 24px;
     }
     .product-card {
       background: white;
@@ -86,42 +123,42 @@
     }
     .product-card img {
       width: 100%;
-      height: 160px;
+      height: 150px;
       object-fit: cover;
       background: #eee;
     }
     .product-card-body {
-      padding: 12px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
       flex-grow: 1;
     }
     .product-card-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
       margin-bottom: 6px;
       line-height: 1.3;
-      height: 36px;
+      height: 34px;
       overflow: hidden;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
     }
     .product-card-price {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       color: #2eaadc;
       margin-top: auto;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .product-card-btn {
       width: 100%;
-      padding: 8px;
+      padding: 7px;
       background: #2eaadc;
       color: white;
       border: none;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
       cursor: pointer;
     }
@@ -142,29 +179,26 @@
       background: white;
       border-radius: 12px;
       width: 100%;
-      max-width: 440px;
+      max-width: 400px;
       padding: 20px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-      max-height: 90vh;
-      overflow-y: auto;
       position: relative;
     }
     .modal-close {
       position: absolute;
       top: 12px; right: 16px;
-      font-size: 22px; cursor: pointer; color: #aaa;
+      font-size: 20px; cursor: pointer; color: #aaa;
     }
-    .modal-close:hover { color: #333; }
     .styles-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 10px;
-      margin: 12px 0;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 8px;
+      margin: 10px 0;
     }
     .style-card {
       border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 8px;
+      border-radius: 6px;
+      padding: 6px;
       text-align: center;
       cursor: pointer;
       background: #fafafa;
@@ -174,7 +208,7 @@
       background: #eef7fc;
     }
     .style-card img {
-      width: 100%; height: 70px; object-fit: cover; border-radius: 6px; background: #eee;
+      width: 100%; height: 60px; object-fit: cover; border-radius: 4px; background: #eee;
     }
 
     /* 底部懸浮購物車按鈕 */
@@ -194,8 +228,8 @@
     }
     .floating-cart-bar:hover { background: #2589b2; }
 
-    /* 結單畫面抽屜 / 區塊 (預設隱藏，點擊購物車後滑出) */
-    .checkout-drawer {
+    /* 抽屜畫面通用樣式 (購物車 / 已結單查詢) */
+    .drawer {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.5);
@@ -203,7 +237,7 @@
       align-items: flex-end;
       z-index: 1100;
     }
-    .checkout-content {
+    .drawer-content {
       background: #f7f6f3;
       width: 100%;
       max-height: 90vh;
@@ -213,14 +247,14 @@
       overflow-y: auto;
       box-shadow: 0 -10px 25px rgba(0,0,0,0.2);
     }
-    .user-info-card {
+    .user-info-card, .cart-card, .query-card {
       background: white;
       padding: 16px;
       border-radius: 10px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
-    .user-info-card h3, .cart-card h3 {
+    .user-info-card h3, .cart-card h3, .query-card h3 {
       margin-top: 0; font-size: 15px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 6px;
     }
     .form-group { margin-bottom: 10px; }
@@ -229,13 +263,6 @@
       width: 100%; padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; background: #fff;
     }
     .contact-group { display: flex; gap: 8px; }
-
-    .cart-card {
-      background: white;
-      padding: 16px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-    }
     .cart-item {
       display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px;
     }
@@ -250,45 +277,48 @@
     }
     button.submit-btn:hover { background: #389e0d; }
     button:disabled { background: #ccc; cursor: not-allowed; }
-    #msg { margin-top: 10px; text-align: center; font-weight: bold; font-size: 13px; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>🛍️ DonPick 懂挑 | 線上預購與選物網</h1>
-      <p>挑選心儀商品，點選規格加入購物車，輕鬆完成預購！</p>
+      <p>點選左側分類挑選商品，加入購物車輕鬆下單！</p>
+      <button class="order-query-btn" onclick="openQueryDrawer()">📋 已結單查詢</button>
     </header>
 
-    <!-- 1. 商品目錄專區（首頁第一畫面） -->
-    <div class="catalog-title">📦 商品目錄專區</div>
-    
-    <!-- 分類按鈕列 (自動依照 Notion 分類生成) -->
-    <div id="categoryTabs" class="category-tabs">
-      <button type="button" class="cat-btn" onclick="filterCategory('全部', this)" style="background: #2eaadc; color: white;">全部商品</button>
-    </div>
+    <div class="main-layout">
+      <!-- 1. 左側商品分類選單 -->
+      <div class="sidebar">
+        <h4>📦 商品分類</h4>
+        <div id="sidebarCategories">
+          <button class="sidebar-btn active" onclick="filterCategory('全部', this)">全部商品</button>
+        </div>
+      </div>
 
-    <!-- 商品網格牆 -->
-    <div class="product-grid" id="productGrid">
-      <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">載入商品資料中...</div>
+      <!-- 2. 右側商品目錄網格牆 -->
+      <div class="content-area">
+        <div class="product-grid" id="productGrid">
+          <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">載入商品資料中...</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- 2. 底部懸浮購物車按鈕（隨時顯示目前選購數量與總金額） -->
+  <!-- 3. 底部懸浮購物車按鈕 -->
   <div class="floating-cart-bar" onclick="openCheckoutDrawer()">
     <div>🛒 查看購物車與結帳 (<span id="floatCartCount">0</span> 件)</div>
     <div>總計 $<span id="floatGrandTotal">0</span> ➔</div>
   </div>
 
-  <!-- 3. 結單與填寫資料彈出視窗 (Drawer) -->
-  <div class="checkout-drawer" id="checkoutDrawer" onclick="closeCheckoutDrawerOnOutside(event)">
-    <div class="checkout-content" onclick="event.stopPropagation()">
+  <!-- 4. 結單與填寫資料抽屜 -->
+  <div class="drawer" id="checkoutDrawer" onclick="closeDrawerOnOutside(event, 'checkoutDrawer')">
+    <div class="drawer-content">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h3 style="margin: 0; font-size: 17px; color: #2eaadc;">🛒 購物車與快速結單</h3>
         <span style="font-size: 22px; cursor: pointer; color: #aaa;" onclick="closeCheckoutDrawer()">&times;</span>
       </div>
 
-      <!-- 買家資料填寫區 -->
       <div class="user-info-card">
         <h3>👤 買家訂購資料</h3>
         <div class="form-group">
@@ -314,7 +344,6 @@
         </div>
       </div>
 
-      <!-- 購物車清單區 -->
       <div class="cart-card">
         <h3>🛍️ 已選購品項</h3>
         <div id="cartContainer">
@@ -327,30 +356,46 @@
         </div>
 
         <button type="button" class="submit-btn" id="submitBtn" onclick="submitOrder()">確認送出全部訂單</button>
-        <div id="msg"></div>
+        <div id="msg" style="margin-top: 10px; text-align: center; font-weight: bold; font-size: 13px;"></div>
       </div>
     </div>
   </div>
 
-  <!-- 4. 點擊商品彈出的規格選擇彈跳視窗 (Modal) -->
+  <!-- 5. 已結單查詢專區抽屜 -->
+  <div class="drawer" id="queryDrawer" onclick="closeDrawerOnOutside(event, 'queryDrawer')">
+    <div class="drawer-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0; font-size: 17px; color: #2eaadc;">📋 已結單與歷史訂單查詢</h3>
+        <span style="font-size: 22px; cursor: pointer; color: #aaa;" onclick="closeQueryDrawer()">&times;</span>
+      </div>
+      <div class="query-card">
+        <p style="font-size: 13px; color: #666; margin-top: 0;">這裡可以查看已成立的訂單與結單公告紀錄，確認代購進度。</p>
+        <div style="padding: 20px; text-align: center; color: #888; background: #fafafa; border-radius: 6px; font-size: 13px;">
+          目前無查詢記錄或請聯繫管理員確認明細
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 規格選擇彈跳視窗 (Modal) -->
   <div class="modal-overlay" id="specModal">
     <div class="modal-card">
       <span class="modal-close" onclick="closeModal()">&times;</span>
-      <h3 id="modalProductName" style="margin-top: 0; font-size: 16px; color: #2eaadc;">商品名稱</h3>
+      <h3 id="modalProductName" style="margin-top: 0; font-size: 15px; color: #2eaadc;">商品名稱</h3>
       
-      <label style="font-size: 13px; font-weight: bold; margin-top: 10px; display: block;">請選擇規格 / 款式：</label>
+      <label style="font-size: 12px; font-weight: bold; margin-top: 8px; display: block;">請選擇規格 / 款式：</label>
       <div id="modalStylesContainer" class="styles-grid"></div>
 
-      <div class="form-group" style="margin-top: 14px;">
+      <div class="form-group" style="margin-top: 12px;">
         <label>購買數量：</label>
         <input type="number" id="modalQuantity" value="1" min="1" oninput="updateModalPrice()">
       </div>
 
-      <div style="font-size: 14px; color: #0066cc; margin: 12px 0; font-weight: bold; text-align: right;">
+      <div style="font-size: 13px; color: #0066cc; margin: 10px 0; font-weight: bold; text-align: right;">
         單價：$<span id="modalUnitPrice">0</span> | 小計：$<span id="modalSubtotal">0</span>
       </div>
 
-      <button type="button" class="product-card-btn" style="padding: 10px; font-size: 15px;" onclick="addModalItemToCart()">➕ 加入購物車</button>
+      <button type="button" class="product-card-btn" style="padding: 9px; font-size: 14px;" onclick="addModalItemToCart()">➕ 加入購物車</button>
     </div>
   </div>
 
@@ -361,7 +406,6 @@
     let cart = [];
     let currentCategory = '全部';
 
-    // 載入商品資料庫並渲染成網拍卡片牆
     async function loadCatalog() {
       const grid = document.getElementById('productGrid');
       try {
@@ -374,7 +418,7 @@
           return;
         }
 
-        generateCategoryTabs(allProducts);
+        generateSidebarCategories(allProducts);
         renderFilteredProducts();
 
       } catch (e) {
@@ -383,38 +427,25 @@
       }
     }
 
-    // 動態產生日系分類切換按鈕列
-    function generateCategoryTabs(products) {
-      const tabsContainer = document.getElementById('categoryTabs');
+    // 生成左側分類選單
+    function generateSidebarCategories(products) {
+      const container = document.getElementById('sidebarCategories');
       const categories = ['全部', ...new Set(products.map(p => p.category || '其他').filter(c => c !== '全部'))];
       
-      tabsContainer.innerHTML = '';
+      container.innerHTML = '';
       categories.forEach(cat => {
         const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'cat-btn';
+        btn.className = `sidebar-btn ${cat === currentCategory ? 'active' : ''}`;
         btn.innerText = cat;
-        btn.style.cssText = `
-          padding: 6px 14px; border: 1px solid #2eaadc; 
-          background: ${cat === currentCategory ? '#2eaadc' : 'white'}; 
-          color: ${cat === currentCategory ? 'white' : '#2eaadc'}; 
-          border-radius: 20px; font-size: 13px; cursor: pointer; white-space: nowrap;
-        `;
         btn.onclick = () => filterCategory(cat, btn);
-        tabsContainer.appendChild(btn);
+        container.appendChild(btn);
       });
     }
 
     function filterCategory(category, btnElement) {
       currentCategory = category;
-      document.querySelectorAll('.cat-btn').forEach(b => {
-        b.style.background = 'white';
-        b.style.color = '#2eaadc';
-      });
-      if (btnElement) {
-        btnElement.style.background = '#2eaadc';
-        btnElement.style.color = 'white';
-      }
+      document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+      if (btnElement) btnElement.classList.add('active');
       renderFilteredProducts();
     }
 
@@ -425,15 +456,13 @@
         : allProducts.filter(p => p.category === currentCategory);
 
       if (filtered.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">此分類目前無商品</div>';
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 30px;">此分類目前無商品</div>';
         return;
       }
 
       const groupedMap = {};
       filtered.forEach(item => {
-        if (!groupedMap[item.productName]) {
-          groupedMap[item.productName] = [];
-        }
+        if (!groupedMap[item.productName]) groupedMap[item.productName] = [];
         groupedMap[item.productName].push(item);
       });
 
@@ -446,7 +475,7 @@
 
         const imgTag = coverImg 
           ? `<img src="${coverImg}" alt="${productName}">`
-          : `<div style="height:160px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無商品圖片</div>`;
+          : `<div style="height:150px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無商品圖片</div>`;
 
         grid.innerHTML += `
           <div class="product-card">
@@ -479,12 +508,12 @@
         
         const imgTag = style.imageUrl 
           ? `<img src="${style.imageUrl}">` 
-          : `<div style="height:70px; background:#eee; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#888;">無圖</div>`;
+          : `<div style="height:60px; background:#eee; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#888;">無圖</div>`;
 
         card.innerHTML = `
           ${imgTag}
-          <div style="font-size: 12px; font-weight: bold; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${style.styleName}</div>
-          <div style="font-size: 11px; color: #2eaadc;">$${style.price}</div>
+          <div style="font-size: 11px; font-weight: bold; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${style.styleName}</div>
+          <div style="font-size: 10px; color: #2eaadc;">$${style.price}</div>
         `;
 
         card.onclick = () => {
@@ -587,7 +616,6 @@
       renderCart();
     }
 
-    // 控制結單畫面的開啟與關閉
     function openCheckoutDrawer() {
       if (cart.length === 0) {
         alert("購物車是空的，請先挑選商品加入購物車！");
@@ -595,18 +623,17 @@
       }
       document.getElementById('checkoutDrawer').style.display = 'flex';
     }
+    function closeCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'none'; }
 
-    function closeCheckoutDrawer() {
-      document.getElementById('checkoutDrawer').style.display = 'none';
-    }
+    function openQueryDrawer() { document.getElementById('queryDrawer').style.display = 'flex'; }
+    function closeQueryDrawer() { document.getElementById('queryDrawer').style.display = 'none'; }
 
-    function closeCheckoutDrawerOnOutside(event) {
-      if (event.target.id === 'checkoutDrawer') {
-        closeCheckoutDrawer();
+    function closeDrawerOnOutside(event, drawerId) {
+      if (event.target.id === drawerId) {
+        document.getElementById(drawerId).style.display = 'none';
       }
     }
 
-    // 提交訂單
     async function submitOrder() {
       const nickname = document.getElementById('nickname').value.trim();
       const contactInfo = document.getElementById('contactInfo').value.trim();
@@ -646,10 +673,9 @@
           renderCart();
           msg.style.color = '#333';
           msg.innerHTML = `
-            <div style="text-align: center; padding: 15px; line-height: 1.6; background: #fdfdfd; border: 2px dashed #4CAF50; border-radius: 10px; margin-top: 15px;">
-              <h3 style="color: #2e7d32; margin-top: 0;">🎉 預購下單成功！感謝您的訂購！</h3>
-              <p style="font-size: 14px; font-weight: bold; color: #d32f2f;">📸 【請先將此畫面「截圖」保存】</p>
-              <p style="font-size: 13px;">請點擊下方私訊 LINE 官方帳號將截圖傳給我們！</p>
+            <div style="text-align: center; padding: 12px; background: #fdfdfd; border: 2px dashed #4CAF50; border-radius: 8px; margin-top: 10px;">
+              <h3 style="color: #2e7d32; margin-top: 0;">🎉 預購下單成功！</h3>
+              <p style="font-size: 13px; font-weight: bold; color: #d32f2f;">📸 請將此畫面截圖私訊 LINE 官方帳號！</p>
             </div>
           `;
         } else {
