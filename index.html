@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DonPick 懂挑 | 線上預購與選物網站</title>
-  <!-- 瀏覽器分頁小圖 -->
+  <!-- 瀏覽器分頁小圖 (Favicon) -->
   <link rel="icon" type="image/png" href="./Logo.png">
   <style>
     :root {
@@ -92,7 +92,7 @@
       color: #7d403a;
     }
 
-    /* 分類導覽 */
+    /* 自動排序分類導覽頁籤 */
     .category-bar {
       display: flex;
       gap: 8px;
@@ -139,6 +139,7 @@
       height: 160px;
       object-fit: cover;
       background: var(--cream-light);
+      cursor: zoom-in;
     }
     .product-info {
       padding: 12px;
@@ -238,7 +239,7 @@
       background: #fbf5ee;
     }
     .style-card img {
-      width: 100%; height: 60px; object-fit: cover; border-radius: 4px;
+      width: 100%; height: 60px; object-fit: cover; border-radius: 4px; cursor: zoom-in;
     }
 
     /* 抽屜 (Drawer) 樣式 */
@@ -265,19 +266,19 @@
     .submit-btn { background: var(--milk-red); color: white; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; }
     .submit-btn:hover { background: var(--milk-red-dark); }
 
-    /* Lightbox 預覽大圖 */
+    /* Lightbox 圖片放大預覽 */
     #lightbox {
       display: none; position: fixed; z-index: 2000; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8); justify-content: center; align-items: center; cursor: zoom-out;
+      background: rgba(0,0,0,0.85); justify-content: center; align-items: center; cursor: zoom-out;
     }
-    #lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    #lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.4); }
   </style>
 </head>
 <body>
 
   <header>
     <div class="logo-area">
-      <!-- 🎯 讀取專案根目錄中的 Logo.png -->
+      <!-- 🎯 讀取專案根目錄中的 Logo.png (若讀取失敗則自動備用顯示) -->
       <img src="./Logo.png" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
       <span>DonPick 懂挑</span>
     </div>
@@ -293,9 +294,9 @@
       <div id="announcementList"></div>
     </div>
 
-    <!-- 分類選單 -->
+    <!-- 自動排序分類選單 (頁籤) -->
     <div class="category-bar" id="categoryBar">
-      <button class="cat-btn active" onclick="filterCategory('全部', this)">全部商品</button>
+      <button class="cat-btn active" onclick="filterCategory('全部', '全部', this)">全部商品</button>
     </div>
 
     <!-- 商品網格 -->
@@ -447,7 +448,7 @@
         <label>📷 上傳參考圖片 (會自動壓縮)：</label>
         <input type="file" id="wishImageFile" accept="image/*" onchange="compressAndPreviewWishImage(this)" style="padding: 4px; font-size: 12px;">
         <div id="wishImagePreviewContainer" style="margin-top: 8px; display: none;">
-          <img id="wishImagePreview" style="max-height: 80px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <img id="wishImagePreview" style="max-height: 80px; border-radius: 6px; border: 1px solid var(--border-color); cursor: zoom-in;" onclick="openLightbox(this.src)">
         </div>
       </div>
 
@@ -456,7 +457,7 @@
     </div>
   </div>
 
-  <!-- Lightbox 圖片預覽 -->
+  <!-- Lightbox 圖片放大預覽 -->
   <div id="lightbox" onclick="this.style.display='none'">
     <img id="lightboxImg" src="">
   </div>
@@ -467,6 +468,7 @@
     let currentSelectedStyle = null;
     let cart = [];
     let currentCategory = '全部';
+    let currentCategoryName = '全部';
     let wishImageBase64 = '';
 
     async function loadCatalog() {
@@ -491,7 +493,7 @@
         if (data.success && data.products) {
           allProducts = data.products;
           buildCategories();
-          renderProducts('全部');
+          renderProducts(currentCategory);
         } else {
           grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">目前無上架商品</div>';
         }
@@ -500,36 +502,64 @@
       }
     }
 
+    // 🌟 自動根據 Notion 分類名稱編號排序（例如 1_新加坡，網頁自動去掉編號並排好）
     function buildCategories() {
       const bar = document.getElementById('categoryBar');
-      let cats = new Set(['全部']);
+      if (!bar) return;
+
+      const rawCats = [];
       allProducts.forEach(p => {
         if (p.categories && Array.isArray(p.categories)) {
-          p.categories.forEach(c => cats.add(c));
-        } else if (p.category) {
-          cats.add(p.category);
+          p.categories.forEach(c => {
+            if (typeof c === 'string' && c.trim() !== '') rawCats.push(c.trim());
+          });
+        } else if (p.category && typeof p.category === 'string') {
+          rawCats.push(p.category.trim());
         }
       });
+
+      const uniqueRawCats = [...new Set(rawCats)];
+      
+      // 依照編號文字自然排序
+      uniqueRawCats.sort((a, b) => {
+        return a.localeCompare(b, 'zh-Hant', { numeric: true });
+      });
+
+      window.categoryMap = {};
+      const displayCategories = uniqueRawCats.map(rawCat => {
+        // 自動去除前面的數字與底線/點/空格（例如 "1_新加坡" -> "新加坡"）
+        let cleanName = rawCat.replace(/^[\d]+[_、.\s]+/, '').trim();
+        window.categoryMap[cleanName] = rawCat;
+        return cleanName;
+      });
+
+      const categories = ['全部', ...displayCategories];
+      
       bar.innerHTML = '';
-      cats.forEach(cat => {
+      categories.forEach(cat => {
         const btn = document.createElement('button');
-        btn.className = `cat-btn ${cat === '全部' ? 'active' : ''}`;
+        const filterVal = (cat === '全部') ? '全部' : window.categoryMap[cat];
+        
+        btn.className = `cat-btn ${cat === currentCategoryName ? 'active' : ''}`;
         btn.innerText = cat;
-        btn.onclick = (e) => filterCategory(cat, e.target);
+        btn.onclick = (e) => filterCategory(filterVal, cat, e.target);
         bar.appendChild(btn);
       });
     }
 
-    function filterCategory(cat, btnEl) {
-      currentCategory = cat;
+    function filterCategory(rawCategory, displayName, btnEl) {
+      currentCategoryName = displayName;
+      currentCategory = rawCategory;
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       if (btnEl) btnEl.classList.add('active');
-      renderProducts(cat);
+      renderProducts(rawCategory);
     }
 
     function renderProducts(cat) {
       const grid = document.getElementById('productGrid');
-      const filtered = cat === '全部' ? allProducts : allProducts.filter(p => (p.categories && p.categories.includes(cat)) || p.category === cat);
+      const filtered = (cat === '全部') 
+        ? allProducts 
+        : allProducts.filter(p => (p.categories && p.categories.includes(cat)) || p.category === cat);
 
       if (filtered.length === 0) {
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">此分類目前無商品</div>';
@@ -545,7 +575,10 @@
 
       grid.innerHTML = '';
       Object.values(groups).forEach(item => {
-        const imgTag = item.imageUrl ? `<img src="${item.imageUrl}">` : `<div style="height:160px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
+        const imgTag = item.imageUrl 
+          ? `<img src="${item.imageUrl}" onclick="openLightbox('${item.imageUrl}')" alt="${item.productName}">` 
+          : `<div style="height:160px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
+        
         grid.innerHTML += `
           <div class="product-card">
             ${imgTag}
@@ -582,7 +615,10 @@
       matchedStyles.forEach((style, idx) => {
         const card = document.createElement('div');
         card.className = 'style-card';
-        const imgTag = style.imageUrl ? `<img src="${style.imageUrl}">` : `<div style="height:50px; background:#eee; font-size:10px; display:flex; align-items:center; justify-content:center; color:#888;">無圖</div>`;
+        const imgTag = style.imageUrl 
+          ? `<img src="${style.imageUrl}" onclick="event.stopPropagation(); openLightbox('${style.imageUrl}')">` 
+          : `<div style="height:50px; background:#eee; font-size:10px; display:flex; align-items:center; justify-content:center; color:#888;">無圖</div>`;
+        
         card.innerHTML = `${imgTag}<div style="font-size:11px; font-weight:bold; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${style.styleName}</div><div style="font-size:10px; color:var(--milk-red);">$${style.price}</div>`;
         
         card.onclick = () => {
@@ -823,7 +859,7 @@
       }
     }
 
-    // 🎯 自動壓縮圖片並轉為極輕量 Base64 (防止 413 錯誤)
+    // 自動壓縮許願圖片 (防 413 錯誤)
     function compressAndPreviewWishImage(input) {
       if (!input.files || !input.files[0]) return;
       const file = input.files[0];
@@ -834,21 +870,15 @@
         img.src = e.target.result;
         img.onload = function() {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 600; // 限制最大寬度 600px
-          const MAX_HEIGHT = 600; // 限制最大高度 600px
+          const MAX_WIDTH = 600;
+          const MAX_HEIGHT = 600;
           let width = img.width;
           let height = img.height;
 
           if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
+            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
           } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
+            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
           }
 
           canvas.width = width;
@@ -856,7 +886,6 @@
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
 
-          // 壓縮為 JPEG，品質 0.6 (大幅縮減容量至數十 KB 內)
           wishImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
 
           document.getElementById('wishImagePreview').src = wishImageBase64;
@@ -909,6 +938,7 @@
       }
     }
 
+    // 燈箱放大功能
     function openLightbox(url) {
       document.getElementById('lightboxImg').src = url;
       document.getElementById('lightbox').style.display = 'flex';
