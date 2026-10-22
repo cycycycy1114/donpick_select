@@ -16,50 +16,36 @@ export default async function handler(req, res) {
     }
 
     const notion = new Client({ auth: notionToken });
-    const { nickname, contactInfo, productName, location, budget, imageUrl } = req.body;
+    const { nickname, contactInfo, productName, location, budget } = req.body;
 
     if (!productName) {
       return res.status(400).json({ success: false, error: '請填寫想許願的商品名稱' });
     }
 
-    const properties = {
-      "買家暱稱": {
-        title: [{ text: { content: nickname || '匿名許願者' } }]
-      },
-      "聯絡方式": {
-        rich_text: [{ text: { content: contactInfo || '未填寫' } }]
-      },
-      "商品名稱": {
-        rich_text: [{ text: { content: `✨ [許願] ${productName}` } }]
-      },
-      "規格款式": {
-        rich_text: [{ text: { content: `地點：${location || '未指定'} | 預算：${budget || '無上限'}` } }]
-      },
-      "備註": {
-        rich_text: [{ text: { content: '粉絲許願單（附參考圖）' } }]
-      },
-      "出貨狀態": {
-        status: { name: '備貨中' }
-      },
-      "付款狀態": {
-        status: { name: '未付款' }
-      }
-    };
-
-    // 如果使用者有上傳參考圖片，一併寫入 Notion 檔案欄位
-    if (imageUrl) {
-      properties["商品圖片"] = {
-        files: [{
-          name: "wish_reference.jpg",
-          external: { url: imageUrl }
-        }]
-      };
-    }
-
+    // 1. 寫入 Notion 資料庫
     await notion.pages.create({
       parent: { database_id: dbId },
-      properties: properties
+      properties: {
+        "買家暱稱": { title: [{ text: { content: nickname || '匿名許願者' } }] },
+        "聯絡方式": { rich_text: [{ text: { content: contactInfo || '未填寫' } }] },
+        "商品名稱": { rich_text: [{ text: { content: `✨ [許願] ${productName}` } }] },
+        "規格款式": { rich_text: [{ text: { content: `地點：${location || '未指定'} | 預算：${budget || '無上限'}` } }] },
+        "備註": { rich_text: [{ text: { content: '粉絲許願單' } }] }
+      }
     });
+
+    // 2. 🎯 發送 Telegram 通知
+    const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    if (tgToken && chatId) {
+      const tgMessage = `✨ 【收到新的粉絲許願！】\n\n👤 暱稱/聯絡：${nickname || '未填寫'}\n🎯 商品：${productName}\n📍 地點：${location || '未指定'}\n💰 預算：${budget || '無上限'}`;
+      await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: tgMessage })
+      });
+    }
 
     return res.status(200).json({ success: true, message: '許願成功！' });
 
