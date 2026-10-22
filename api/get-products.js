@@ -25,11 +25,11 @@ export default async function handler(req, res) {
       try {
         const aRes = await notion.databases.query({ database_id: productDbId });
         aRes.results.forEach(page => {
-          const p = page.properties;
+          const p = page.properties || {};
           let isEnded = false;
           
           // 檢查 A 表狀態是否為「已結束」
-          const statusKey = Object.keys(p).find(k => p[k].type === 'status' || k.includes('狀態'));
+          const statusKey = Object.keys(p).find(k => p[k]?.type === 'status' || k.includes('狀態'));
           if (statusKey && p[statusKey]?.status) {
             const statusVal = p[statusKey].status.name || '';
             if (statusVal.trim() === '已結束') isEnded = true;
@@ -38,15 +38,15 @@ export default async function handler(req, res) {
           if (!isEnded) {
             // 抓取主商品名稱 (title)
             let name = '';
-            const titleKey = Object.keys(p).find(k => k[k].type === 'title');
+            const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
             if (titleKey && p[titleKey]?.title?.[0]) {
               name = p[titleKey].title.map(t => t.plain_text).join('');
             }
 
             if (name) {
-              // 🎯 精準抓取 multi_select 格式的「商品分類」
+              // 🎯 抓取 multi_select 格式的「商品分類」
               let categories = ['伴手禮'];
-              const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k].type === 'multi_select');
+              const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k]?.type === 'multi_select');
               if (catKey && p[catKey]) {
                 const prop = p[catKey];
                 if (prop.type === 'multi_select' && prop.multi_select?.length > 0) {
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
 
               // 抓取 A 表備用收單日期
               let aDeadline = '';
-              const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k].type === 'date');
+              const dateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k]?.type === 'date'));
               if (dateKey && p[dateKey]?.date) {
                 aDeadline = p[dateKey].date.start || '';
               }
@@ -99,10 +99,10 @@ export default async function handler(req, res) {
     const products = [];
 
     cRes.results.forEach(page => {
-      const p = page.properties;
+      const p = page.properties || {};
 
       let parentInfo = null;
-      const relKey = Object.keys(p).find(k => p[k].type === 'relation');
+      const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
       
       if (relKey && p[relKey]?.relation?.length > 0) {
         const relId = p[relKey].relation[0].id;
@@ -124,31 +124,31 @@ export default async function handler(req, res) {
 
       // 🎯 抓取 C 表的款式名稱 (Title 屬性)
       let styleName = '標準款式';
-      const titleKey = Object.keys(p).find(k => k[k].type === 'title');
+      const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
       if (titleKey && p[titleKey]?.title?.[0]) {
         styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
       }
 
       // 🎯 【優先從 C 表抓取收單日期】若 C 表沒填，則自動採用 A 表的收單日期
       let deadline = parentInfo.deadline;
-      const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止')) && p[k].type === 'date');
+      const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止')) && p[k]?.type === 'date');
       if (cDateKey && p[cDateKey]?.date?.start) {
         deadline = p[cDateKey].date.start;
       }
 
       // 抓取價格 (number)
       let price = 0;
-      const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
+      const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k]?.type === 'number');
       if (priceKey && p[priceKey]?.number !== undefined) {
         price = p[priceKey].number || 0;
       } else {
-        const anyNumKey = Object.keys(p).find(k => p[k].type === 'number');
+        const anyNumKey = Object.keys(p).find(k => p[k]?.type === 'number');
         if (anyNumKey && p[anyNumKey]?.number !== undefined) price = p[anyNumKey].number || 0;
       }
 
       // 抓取圖片 (files)
       let imageUrl = '';
-      const imgKey = Object.keys(p).find(k => p[k].type === 'files' || k.includes('圖'));
+      const imgKey = Object.keys(p).find(k => p[k]?.type === 'files' || k.includes('圖'));
       if (imgKey && p[imgKey]?.files?.[0]) {
         const fileObj = p[imgKey].files[0];
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
