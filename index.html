@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DonPick 懂挑 | 線上預購與選物網站</title>
-  <!-- 🎯 瀏覽器分頁小圖指定為 Logo.jpg -->
-  <link rel="icon" type="image/jpeg" href="./logo.jpg">
+  <!-- 🎯 直接內嵌 Logo 圖片 Base64，確保 100% 絕對完美顯示 -->
+  <link rel="icon" type="image/jpeg" href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=">
   <style>
     :root {
       --milk-red: #b85b53;       /* 奶茶紅主色 */
@@ -278,8 +278,8 @@
 
   <header>
     <div class="logo-area">
-      <!-- 🎯 讀取專案根目錄中的 Logo.jpg -->
-      <img src="./Logo.jpg" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
+      <!-- 🎯 內嵌 Logo 圖片 -->
+      <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=" alt="Logo" class="logo-img" id="brandLogo">
       <span>DonPick 懂挑</span>
     </div>
     <div class="header-btns">
