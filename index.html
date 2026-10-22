@@ -17,7 +17,7 @@
     .container { max-width: 1200px; margin: 0 auto; }
     
     header {
-      text-align: center; margin-bottom: 24px; background: white; padding: 22px;
+      text-align: center; margin-bottom: 20px; background: white; padding: 22px;
       border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative;
     }
     header h1 { margin: 0 0 6px; font-size: 22px; color: #2eaadc; }
@@ -27,6 +27,18 @@
       border: 1px solid #ddd; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; color: #333;
     }
     .order-query-btn:hover { background: #e4e4e4; }
+
+    /* 📢 上方 Notion 公告專區 */
+    .announcement-banner {
+      background: linear-gradient(135deg, #fffbe6, #fff1b8);
+      border: 1px solid #ffe58f;
+      padding: 14px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .announcement-title { font-weight: bold; color: #d46b08; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .announcement-content { font-size: 13px; color: #594200; line-height: 1.6; white-space: pre-line; }
 
     .main-layout { display: flex; gap: 24px; align-items: flex-start; }
     .sidebar { width: 220px; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); flex-shrink: 0; }
@@ -40,20 +52,15 @@
 
     .content-area { flex-grow: 1; }
 
-    .support-banner {
-      background: #eef7fc; border: 1px solid #b6e3f5; padding: 14px 18px;
-      border-radius: 12px; margin-bottom: 20px; font-size: 13px; line-height: 1.5; color: #004080;
+    /* 💬 下方客服專區 (Footer) */
+    .footer-support {
+      background: white; border: 1px solid #e0e0e0; padding: 20px;
+      border-radius: 12px; margin-top: 30px; font-size: 13px; line-height: 1.6; color: #555; text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     }
-    .support-banner strong { color: #0066cc; }
-    .support-banner a { color: #06c755; font-weight: bold; text-decoration: none; }
-    .support-banner a:hover { text-decoration: underline; }
-
-    /* 📌 訂購須知提示框 */
-    .notice-box {
-      background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; padding: 12px 14px;
-      margin-bottom: 16px; font-size: 12px; line-height: 1.6; color: #8c6b00;
-    }
-    .notice-box ul { margin: 4px 0 0 18px; padding: 0; }
+    .footer-support strong { color: #2eaadc; }
+    .footer-support a { color: #06c755; font-weight: bold; text-decoration: none; }
+    .footer-support a:hover { text-decoration: underline; }
 
     .product-grid {
       display: grid;
@@ -144,6 +151,12 @@
       <button class="order-query-btn" onclick="openQueryDrawer()">📋 已結單查詢</button>
     </header>
 
+    <!-- 📢 上方 Notion 公告事項專區 -->
+    <div class="announcement-banner" id="announcementBanner" style="display: none;">
+      <div class="announcement-title">📢 【最新公告事項】</div>
+      <div class="announcement-content" id="announcementText">載入公告中...</div>
+    </div>
+
     <div class="main-layout">
       <div class="sidebar">
         <h4>📦 商品分類</h4>
@@ -153,14 +166,15 @@
       </div>
 
       <div class="content-area">
-        <div class="support-banner">
-          <strong>💬 【訂單客服專區】</strong><br>
-          有任何匯款、修改資料或商品問題，歡迎隨時聯絡我們：<br>
-          👉 LINE 客服：<strong>@122dbekb</strong> (或點選連結 <a href="https://lin.ee/9RRJHKL" target="_blank">https://lin.ee/9RRJHKL</a>)
-        </div>
-
         <div class="product-grid" id="productGrid">
           <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 50px;">載入商品資料中...</div>
+        </div>
+
+        <!-- 💬 下方客服專區 (Footer) -->
+        <div class="footer-support">
+          <strong>💬 【訂單客服與售後專區】</strong><br>
+          有任何匯款、修改資料、合併寄出或商品問題，歡迎隨時聯絡我們：<br>
+          👉 LINE 客服：<strong>@122dbekb</strong> (或點選連結 <a href="https://lin.ee/9RRJHKL" target="_blank">https://lin.ee/9RRJHKL</a>)
         </div>
       </div>
     </div>
@@ -185,10 +199,9 @@
       <div class="user-info-card">
         <h3>👤 買家訂購資料</h3>
         
-        <!-- 📌 訂購須知提示（明確告知由 LINE 私下核對與合併寄出） -->
-        <div class="notice-box">
+        <div class="notice-box" style="background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; line-height: 1.6; color: #8c6b00;">
           <strong>📢 下單與寄送注意事項：</strong>
-          <ul>
+          <ul style="margin: 4px 0 0 18px; padding: 0;">
             <li><strong>成單與通知：</strong> 商品採預購制，未成單將另行通知；若順利成單將為您採購並寄出。</li>
             <li><strong>併單寄送：</strong> 若有多筆訂單欲合併寄出，請務必主動私訊 <a href="https://lin.ee/9RRJHKL" target="_blank" style="color: #0066cc;">LINE 客服</a> 告知！</li>
             <li><strong>隱私保護：</strong> 本站不收集敏感收件資料，送出訂單後請直接<strong>截圖私訊 LINE 官方帳號</strong>核對寄件資料與付款。</li>
@@ -294,6 +307,14 @@
         const res = await fetch('/api/get-products');
         const data = await res.json();
         
+        // 抓取後端回傳的 announcement 公告內容
+        if (data && data.announcement && data.announcement.trim() !== '') {
+          const banner = document.getElementById('announcementBanner');
+          const textEl = document.getElementById('announcementText');
+          textEl.innerText = data.announcement;
+          banner.style.display = 'block';
+        }
+
         if (Array.isArray(data)) {
           allProducts = data;
         } else if (data && Array.isArray(data.products)) {
