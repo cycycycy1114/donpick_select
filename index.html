@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DonPick 懂挑 | 線上預購與選物網站</title>
-  <!-- 瀏覽器分頁小圖 (Favicon) -->
-  <link rel="icon" type="image/prg" href="./Logo.prg">
+  <!-- 🎯 瀏覽器分頁小圖指定為 Logo.jpg -->
+  <link rel="icon" type="image/jpeg" href="./Logo.jpg">
   <style>
     :root {
       --milk-red: #b85b53;       /* 奶茶紅主色 */
@@ -278,8 +278,8 @@
 
   <header>
     <div class="logo-area">
-      <!-- 🎯 讀取專案根目錄中的 Logo.png (若找不到則自動備用顯示) -->
-      <img src="./Logo.png" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
+      <!-- 🎯 讀取專案根目錄中的 Logo.jpg -->
+      <img src="./Logo.jpg" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
       <span>DonPick 懂挑</span>
     </div>
     <div class="header-btns">
@@ -421,7 +421,7 @@
     </div>
   </div>
 
-  <!-- 許願區 Drawer (純文字版，無圖片上傳) -->
+  <!-- 許願區 Drawer (純文字版) -->
   <div class="drawer-overlay" id="wishDrawer" onclick="closeDrawerOnOutside(event, 'wishDrawer')">
     <div class="modal-card">
       <span onclick="closeWishDrawer()" class="modal-close">×</span>
@@ -494,7 +494,6 @@
       }
     }
 
-    // 🌟 自動根據 Notion 分類名稱編號排序（例如 1_新加坡，網頁自動去掉編號並排好）
     function buildCategories() {
       const bar = document.getElementById('categoryBar');
       if (!bar) return;
@@ -511,10 +510,7 @@
       });
 
       const uniqueRawCats = [...new Set(rawCats)];
-      
-      uniqueRawCats.sort((a, b) => {
-        return a.localeCompare(b, 'zh-Hant', { numeric: true });
-      });
+      uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
       window.categoryMap = {};
       const displayCategories = uniqueRawCats.map(rawCat => {
@@ -558,9 +554,7 @@
 
       const groups = {};
       filtered.forEach(p => {
-        if (!groups[p.productName]) {
-          groups[p.productName] = p;
-        }
+        if (!groups[p.productName]) groups[p.productName] = p;
       });
 
       grid.innerHTML = '';
@@ -849,7 +843,6 @@
       }
     }
 
-    // 許願送出（純文字）
     async function submitWish() {
       const contactInfo = document.getElementById('wishContact').value.trim();
       const productName = document.getElementById('wishProductName').value.trim();
@@ -891,7 +884,6 @@
       }
     }
 
-    // 燈箱放大功能
     function openLightbox(url) {
       document.getElementById('lightboxImg').src = url;
       document.getElementById('lightbox').style.display = 'flex';
