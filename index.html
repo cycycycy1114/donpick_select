@@ -77,6 +77,24 @@
       gap: 8px;
     }
 
+    /* 商品分類切換按鈕列 (Tabs) */
+    .category-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .cat-btn {
+      padding: 6px 14px;
+      border: 1px solid #2eaadc;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
     /* 大型網拍風格：商品卡片網格 (Product Grid) */
     .catalog-title {
       font-size: 18px;
@@ -293,8 +311,14 @@
       </div>
     </div>
 
-    <!-- 2. 大型網拍風格：商品目錄卡片牆 -->
+    <!-- 2. 大型網拍風格：商品目錄專區與分類分頁 (Tabs) -->
     <div class="catalog-title">📦 商品目錄專區</div>
+    
+    <!-- 分類按鈕列 -->
+    <div id="categoryTabs" class="category-tabs">
+      <button type="button" class="cat-btn" onclick="filterCategory('全部', this)" style="background: #2eaadc; color: white;">全部商品</button>
+    </div>
+
     <div class="product-grid" id="productGrid">
       <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">載入商品資料中...</div>
     </div>
@@ -343,6 +367,7 @@
     let currentSelectedProduct = null;
     let currentSelectedStyle = null;
     let cart = [];
+    let currentCategory = '全部';
 
     // 載入商品資料庫並渲染成網拍卡片牆
     async function loadCatalog() {
@@ -357,37 +382,11 @@
           return;
         }
 
-        // 以商品名稱進行分組
-        const groupedMap = {};
-        allProducts.forEach(item => {
-          if (!groupedMap[item.productName]) {
-            groupedMap[item.productName] = [];
-          }
-          groupedMap[item.productName].push(item);
-        });
+        // 1. 動態產生地區/分類按鈕
+        generateCategoryTabs(allProducts);
 
-        grid.innerHTML = '';
-        Object.keys(groupedMap).forEach(productName => {
-          const styles = groupedMap[productName];
-          const firstStyle = styles[0];
-          const minPrice = Math.min(...styles.map(s => s.price || 0));
-          const coverImg = firstStyle.imageUrl || '';
-
-          const imgTag = coverImg 
-            ? `<img src="${coverImg}" alt="${productName}">`
-            : `<div style="height:160px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無商品圖片</div>`;
-
-          grid.innerHTML += `
-            <div class="product-card">
-              ${imgTag}
-              <div class="product-card-body">
-                <div class="product-card-title">${productName}</div>
-                <div class="product-card-price">$${minPrice} 起</div>
-                <button class="product-card-btn" onclick="openModal('${productName}')">選購規格</button>
-              </div>
-            </div>
-          `;
-        });
+        // 2. 渲染商品
+        renderFilteredProducts();
 
       } catch (e) {
         console.error("載入失敗:", e);
@@ -395,10 +394,93 @@
       }
     }
 
+    // 動態產生日系分類切換按鈕列
+    function generateCategoryTabs(products) {
+      const tabsContainer = document.getElementById('categoryTabs');
+      const categories = ['全部', ...new Set(products.map(p => p.category || '其他').filter(c => c !== '全部'))];
+      
+      tabsContainer.innerHTML = '';
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cat-btn';
+        btn.innerText = cat;
+        btn.style.cssText = `
+          padding: 6px 14px; border: 1px solid #2eaadc; 
+          background: ${cat === currentCategory ? '#2eaadc' : 'white'}; 
+          color: ${cat === currentCategory ? 'white' : '#2eaadc'}; 
+          border-radius: 20px; font-size: 13px; cursor: pointer; white-space: nowrap;
+        `;
+        btn.onclick = () => filterCategory(cat, btn);
+        tabsContainer.appendChild(btn);
+      });
+    }
+
+    // 切換分類
+    function filterCategory(category, btnElement) {
+      currentCategory = category;
+      
+      document.querySelectorAll('.cat-btn').forEach(b => {
+        b.style.background = 'white';
+        b.style.color = '#2eaadc';
+      });
+      if (btnElement) {
+        btnElement.style.background = '#2eaadc';
+        btnElement.style.color = 'white';
+      }
+
+      renderFilteredProducts();
+    }
+
+    // 根據分類與名稱分組渲染商品
+    function renderFilteredProducts() {
+      const grid = document.getElementById('productGrid');
+      const filtered = currentCategory === '全部' 
+        ? allProducts 
+        : allProducts.filter(p => p.category === currentCategory);
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">此分類目前無商品</div>';
+        return;
+      }
+
+      const groupedMap = {};
+      filtered.forEach(item => {
+        if (!groupedMap[item.productName]) {
+          groupedMap[item.productName] = [];
+        }
+        groupedMap[item.productName].push(item);
+      });
+
+      grid.innerHTML = '';
+      Object.keys(groupedMap).forEach(productName => {
+        const styles = groupedMap[productName];
+        const firstStyle = styles[0];
+        const minPrice = Math.min(...styles.map(s => s.price || 0));
+        const coverImg = firstStyle.imageUrl || '';
+
+        const imgTag = coverImg 
+          ? `<img src="${coverImg}" alt="${productName}">`
+          : `<div style="height:160px; background:#eee; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無商品圖片</div>`;
+
+        grid.innerHTML += `
+          <div class="product-card">
+            ${imgTag}
+            <div class="product-card-body">
+              <div class="product-card-title">${productName}</div>
+              <div class="product-card-price">$${minPrice} 起</div>
+              <button class="product-card-btn" onclick="openModal('${productName}')">選購規格</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
     // 打開規格彈跳視窗
     function openModal(productName) {
       currentSelectedProduct = productName;
-      const matchedStyles = allProducts.filter(p => p.productName === productName);
+      const filtered = currentCategory === '全部' ? allProducts : allProducts.filter(p => p.category === currentCategory);
+      const matchedStyles = filtered.filter(p => p.productName === productName);
       
       document.getElementById('modalProductName').innerText = productName;
       document.getElementById('modalQuantity').value = 1;
