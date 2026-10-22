@@ -28,7 +28,7 @@ export default async function handler(req, res) {
           const p = page.properties;
           let isEnded = false;
           
-          // 檢查狀態是否為「已結束」
+          // 檢查 A 表狀態是否為「已結束」
           const statusKey = Object.keys(p).find(k => p[k].type === 'status' || k.includes('狀態'));
           if (statusKey && p[statusKey]?.status) {
             const statusVal = p[statusKey].status.name || '';
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
           if (!isEnded) {
             // 抓取主商品名稱 (title)
             let name = '';
-            const titleKey = Object.keys(p).find(k => p[k].type === 'title');
+            const titleKey = Object.keys(p).find(k => k[k].type === 'title');
             if (titleKey && p[titleKey]?.title?.[0]) {
               name = p[titleKey].title.map(t => t.plain_text).join('');
             }
@@ -63,11 +63,11 @@ export default async function handler(req, res) {
                 description = p[descKey].rich_text.map(t => t.plain_text).join('');
               }
 
-              // 抓取現貨/預購
-              let saleType = '預購';
-              const typeKey = Object.keys(p).find(k => k.includes('類型') || k.includes('現貨') || k.includes('狀態'));
-              if (typeKey && p[typeKey]?.type === 'select' && p[typeKey].select?.name) {
-                saleType = p[typeKey].select.name;
+              // 抓取 A 表備用收單日期
+              let aDeadline = '';
+              const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k].type === 'date');
+              if (dateKey && p[dateKey]?.date) {
+                aDeadline = p[dateKey].date.start || '';
               }
 
               // 是否需訂金
@@ -83,8 +83,7 @@ export default async function handler(req, res) {
                 name,
                 categories,
                 description,
-                saleType,
-                deadline,
+                deadline: aDeadline,
                 needDeposit
               };
             }
@@ -109,31 +108,34 @@ export default async function handler(req, res) {
         const relId = p[relKey].relation[0].id;
         if (validAMap[relId]) {
           parentInfo = validAMap[relId];
-        } else {
-          return; 
-        }
-      } else {
-        if (Object.keys(validAMap).length === 0) {
-          parentInfo = { name: '精選商品', categories: ['伴手禮'], description: '', saleType: '預購', deadline: '', needDeposit: false };
-        } else {
-          return; 
         }
       }
 
+      // 🛡️ 防呆：若 C 表沒對應到 A 表，提供預設主商品資訊
+      if (!parentInfo) {
+        parentInfo = {
+          name: '精選預購商品',
+          categories: ['伴手禮'],
+          description: '',
+          deadline: '',
+          needDeposit: false
+        };
+      }
+
       // 🎯 抓取 C 表的款式名稱 (Title 屬性)
-      let styleName = '圖片款';
-      const titleKey = Object.keys(p).find(k => p[k].type === 'title');
+      let styleName = '標準款式';
+      const titleKey = Object.keys(p).find(k => k[k].type === 'title');
       if (titleKey && p[titleKey]?.title?.[0]) {
-        styleName = p[titleKey].title.map(t => t.plain_text).join('') || '圖片款';
+        styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
       }
-      
-      // 抓取收單日期
-      let deadline = '';
-      const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('日期') || k.includes('截止'));
-      if (dateKey && p[dateKey]?.type === 'date' && p[dateKey].date?.start) {
-        deadline = p[dateKey].date.start;
+
+      // 🎯 【優先從 C 表抓取收單日期】若 C 表沒填，則自動採用 A 表的收單日期
+      let deadline = parentInfo.deadline;
+      const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止')) && p[k].type === 'date');
+      if (cDateKey && p[cDateKey]?.date?.start) {
+        deadline = p[cDateKey].date.start;
       }
-      
+
       // 抓取價格 (number)
       let price = 0;
       const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
@@ -156,8 +158,8 @@ export default async function handler(req, res) {
         productName: parentInfo.name,
         categories: parentInfo.categories || ['伴手禮'],
         description: parentInfo.description || '',
-        saleType: parentInfo.saleType,
-        deadline: parentInfo.deadline,
+        saleType: '預購',
+        deadline: deadline,
         needDeposit: parentInfo.needDeposit,
         styleName: styleName,
         price: price,
