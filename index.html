@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DonPick 懂挑 | 線上預購與選物網站</title>
+  <!-- 🎯 引入 Google 專屬日系溫柔圓潤字型 (M PLUS Rounded 1c) -->
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/jpeg" href="./Logo.jpg">
   <style>
     :root {
@@ -17,7 +19,8 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      /* 🎯 全面套用日系雜誌風圓潤字體 */
+      font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background-color: var(--bg-cream);
       color: var(--text-main);
       margin: 0;
@@ -41,17 +44,15 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 700;
       color: var(--milk-red);
-      /* 🎯 採用溫柔日系雜誌風搭配（英文字母使用優雅襯線，中文使用日系圓體/細明體感） */
-      font-family: "Georgia", "Hiragino Maru Gothic ProN", "Microsoft JhengHei", sans-serif;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.5px;
     }
     
     .logo-img {
-      width: 46px;
-      height: 46px;
+      width: 48px;
+      height: 48px;
       object-fit: cover;
       border-radius: 50%;
       border: 1px solid var(--border-color);
@@ -152,7 +153,7 @@
       cursor: zoom-in;
     }
     
-    /* 🎯 預購與需訂金標籤 */
+    /* 🎯 預購與需訂金標籤樣式調整 */
     .badges-container {
       position: absolute;
       top: 8px;
@@ -165,10 +166,10 @@
       background: rgba(184, 91, 83, 0.92);
       color: white;
       font-size: 11px;
-      padding: 3px 8px;
+      padding: 4px 9px;
       border-radius: 12px;
       font-weight: bold;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
     .badge-deposit {
       background: rgba(212, 107, 8, 0.95);
@@ -592,12 +593,12 @@
           ? `<img src="${item.imageUrl}" onclick="openLightbox('${item.imageUrl}')" alt="${item.productName}">` 
           : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
         
-        // 🎯 完整讀取狀態與訂金需求標籤
+        // 🎯 完美對應後端傳回的 saleType 與 needDeposit 欄位
         let badgesHtml = '';
-        if (item.status) {
-          badgesHtml += `<span class="badge">${item.status}</span>`;
+        if (item.saleType) {
+          badgesHtml += `<span class="badge">${item.saleType}</span>`;
         }
-        if (item.isDepositNeeded) {
+        if (item.needDeposit) {
           badgesHtml += `<span class="badge badge-deposit">需訂金</span>`;
         }
 
