@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
     const notion = new Client({ auth: notionToken });
 
-    // 0. 抓取 Notion 公告 (抓取最近的 3 筆)
+    // 0. 抓取 Notion 公告 (抓取最近的 3 筆，全面防呆)
     let announcements = [];
     if (announcementDbId) {
       try {
@@ -91,9 +91,10 @@ export default async function handler(req, res) {
                 description = p[descKey].rich_text.map(t => t.plain_text).join('');
               }
 
+              // 🛡️ A表日期絕對防呆
               let aDeadline = '';
               const dateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止') || p[k]?.type === 'date'));
-              if (dateKey && p[dateKey]?.date && p[dateKey].date.start) {
+              if (dateKey && p[dateKey]?.date && typeof p[dateKey].date === 'object' && p[dateKey].date.start) {
                 aDeadline = p[dateKey].date.start;
               }
 
@@ -163,10 +164,11 @@ export default async function handler(req, res) {
         }
       }
 
+      // 🛡️ C表日期絕對防呆
       let deadline = parentInfo.deadline;
       const cDateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('日期') || k.includes('截止')) && p[k]?.type === 'date');
-      if (cDateKey && p[cDateKey]?.date && p[cDateKey].date.start) {
-        deadline = cDateKey.date.start;
+      if (cDateKey && p[cDateKey]?.date && typeof p[cDateKey].date === 'object' && p[cDateKey].date.start) {
+        deadline = p[cDateKey].date.start;
       }
 
       let price = 0;
@@ -200,7 +202,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ 
       success: true, 
-      announcements: announcements, // 確保回傳陣列
+      announcements: announcements, 
       products 
     });
 
