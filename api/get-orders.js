@@ -38,10 +38,11 @@ export default async function handler(req, res) {
       let spec = '';
       let quantity = 1;
       let totalPrice = 0;
-      let delivery = '未填寫';
+      let delivery = '7-11 店到店';
       let note = '';
       let fulfillmentStatus = '備貨中';
       let paymentStatus = '未付款';
+      let imageUrl = ''; // 圖片縮圖
 
       // 🎯 智慧辨識各個 Notion 欄位
       Object.keys(p).forEach(k => {
@@ -59,32 +60,31 @@ export default async function handler(req, res) {
             contactInfo = textVal;
           } else if (lowerKey.includes('商品') || lowerKey.includes('品項') || lowerKey === 'product') {
             product = textVal;
-          } else if (lowerKey.includes('規格') || lowerKey.includes('款式') || lowerKey.includes('spec')) {
-            spec = textVal;
+          } else if (lowerKey.includes('規格') || lowerKey.includes('款式') || lowerKey.includes('spec') || lowerKey.includes('品項')) {
+            // 🎯 只要欄位包含規格、款式、spec，就把它當作 spec 抓取
+            if (lowerKey.includes('規格') || lowerKey.includes('款式') || lowerKey.includes('spec')) {
+              spec = textVal;
+            }
           } else if (lowerKey.includes('備註') || lowerKey.includes('許願') || lowerKey.includes('note')) {
             note = textVal;
           }
         } else if (prop.type === 'select' && prop.select?.name) {
           const selectVal = prop.select.name;
           
-          // 🎯 嚴格區分「取貨方式」與「出貨/物流狀態」
           if (lowerKey.includes('取貨') || lowerKey.includes('寄送') || lowerKey.includes('delivery')) {
             delivery = selectVal;
           } else if (lowerKey.includes('出貨狀態') || lowerKey.includes('物流狀態') || lowerKey.includes('fulfillment')) {
             fulfillmentStatus = selectVal;
           } else if (lowerKey.includes('付款') || lowerKey.includes('金流') || lowerKey.includes('payment')) {
             paymentStatus = selectVal;
-          } else {
-            // 如果只有一般狀態欄位，預設給出貨狀態
-            if (lowerKey.includes('狀態') && !lowerKey.includes('付款')) {
-              fulfillmentStatus = selectVal;
-            }
+          } else if (lowerKey.includes('規格') || lowerKey.includes('款式') || lowerKey.includes('spec')) {
+            spec = selectVal; // 如果規格是用 select 做的
           }
         } else if (prop.type === 'status' && prop.status?.name) {
           const statusVal = prop.status.name;
-          if (lowerKey.includes('出貨') || lowerKey.includes('物流') || lowerKey.includes('fulfillment')) {
+          if (lowerKey.includes('出貨') || lowerKey.includes('物流')) {
             fulfillmentStatus = statusVal;
-          } else if (lowerKey.includes('付款') || lowerKey.includes('金流') || lowerKey.includes('payment')) {
+          } else if (lowerKey.includes('付款') || lowerKey.includes('金流')) {
             paymentStatus = statusVal;
           }
         } else if (prop.type === 'number') {
@@ -92,8 +92,20 @@ export default async function handler(req, res) {
           if (lowerKey.includes('總金額') || lowerKey.includes('總價') || lowerKey.includes('total') || lowerKey.includes('金額')) {
             totalPrice = prop.number || 0;
           }
+        } else if (prop.type === 'files') {
+          if (prop.files?.[0]) {
+            const fileObj = prop.files[0];
+            imageUrl = fileObj.file?.url || fileObj.external?.url || '';
+          }
         }
       });
+
+      // 防呆：如果 Notion 中沒有獨立的規格欄位，但商品名稱裡面包含括號或橫線（例如：商品名-規格），試著自動分離
+      if ((!spec || spec === '標準款式') && product.includes(' - ')) {
+        const parts = product.split(' - ');
+        product = parts[0].trim();
+        spec = parts.slice(1).join(' - ').trim();
+      }
 
       // 檢查是否符合買家輸入的關鍵字
       const matchKeyword = keyword.toLowerCase();
@@ -108,10 +120,11 @@ export default async function handler(req, res) {
           spec: spec || '標準款式',
           quantity: quantity,
           totalPrice: totalPrice,
-          delivery: delivery,
+          delivery,
           note,
           fulfillmentStatus,
           paymentStatus,
+          imageUrl,
           createdAt: page.created_time ? page.created_time.substring(0, 16).replace('T', ' ') : '',
           rawTime: page.created_time ? new Date(page.created_time).getTime() : 0
         });
@@ -127,7 +140,7 @@ export default async function handler(req, res) {
         groupedOrdersMap[timeKey] = {
           nickname: row.nickname,
           contactInfo: row.contactInfo,
-          delivery: row.delivery !== '未填寫' ? row.delivery : '7-11 店到店', // 預設防呆
+          delivery: row.delivery,
           note: row.note,
           fulfillmentStatus: row.fulfillmentStatus,
           paymentStatus: row.paymentStatus,
@@ -136,18 +149,14 @@ export default async function handler(req, res) {
           grandTotal: 0,
           unpaidTotal: 0
         };
-      } else {
-        // 如果前面沒抓到取貨方式，後續補上
-        if (row.delivery !== '未填寫' && groupedOrdersMap[timeKey].delivery === '7-11 店到店') {
-          groupedOrdersMap[timeKey].delivery = row.delivery;
-        }
       }
 
       groupedOrdersMap[timeKey].items.push({
         product: row.product,
         spec: row.spec,
         quantity: row.quantity,
-        price: row.totalPrice
+        price: row.totalPrice,
+        imageUrl: row.imageUrl
       });
 
       groupedOrdersMap[timeKey].grandTotal += row.totalPrice;
