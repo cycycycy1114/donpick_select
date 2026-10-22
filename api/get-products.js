@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   // 款式明細表 C表
 
     if (!notionToken || !productDetailDbId) {
-      return res.status(500).json({ success: false, error: '伺服器未設定 Notion 環境變數 (NOTION_TOKEN 或 PRODUCT_DETAIL_DB_ID)' });
+      return res.status(500).json({ success: false, error: '伺服器未設定 Notion 環境變數' });
     }
 
     const notion = new Client({ auth: notionToken });
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
             if (titleKey && p[titleKey]?.title?.[0]) {
               const name = p[titleKey].title.map(t => t.plain_text).join('');
               if (name) {
-                // 抓取分類（支援 multi_select 或 select 或 rich_text）
+                // 🎯 穩定抓取複選或單選的「商品分類」
                 let categories = ['伴手禮'];
                 const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('Tag') || p[k].type === 'multi_select' || p[k].type === 'select');
                 if (catKey && p[catKey]) {
@@ -108,10 +108,9 @@ export default async function handler(req, res) {
         if (validAMap[relId]) {
           parentInfo = validAMap[relId];
         } else {
-          return; // 已結束或未找到主商品，排除
+          return; 
         }
       } else {
-        // 如果 C 表沒有設定 Relation，但我們想讓它能直接顯示（防呆），如果沒有 A 表限制則給預設主商品
         if (Object.keys(validAMap).length === 0) {
           parentInfo = { name: '精選商品', categories: ['伴手禮'], saleType: '預購', deadline: '', needDeposit: false };
         } else {
@@ -124,15 +123,9 @@ export default async function handler(req, res) {
       const titleKey = Object.keys(p).find(k => p[k].type === 'title');
       if (titleKey && p[titleKey]?.title?.[0]) {
         styleName = p[titleKey].title.map(t => t.plain_text).join('') || '標準款式';
-      } else {
-        // 備用：若找不到 title 類別，找文字類別
-        const textKey = Object.keys(p).find(k => p[k].type === 'rich_text' || k.includes('款式') || k.includes('規格'));
-        if (textKey && p[textKey]?.rich_text?.[0]) {
-          styleName = p[textKey].rich_text.map(t => t.plain_text).join('') || '標準款式';
-        }
       }
 
-      // 抓取價格 (number)
+      // 抓取價格
       let price = 0;
       const priceKey = Object.keys(p).find(k => (k.includes('價格') || k.includes('單價') || k.includes('Price')) && p[k].type === 'number');
       if (priceKey && p[priceKey]?.number !== undefined) {
@@ -142,7 +135,7 @@ export default async function handler(req, res) {
         if (anyNumKey && p[anyNumKey]?.number !== undefined) price = p[anyNumKey].number || 0;
       }
 
-      // 抓取圖片 (files)
+      // 抓取圖片
       let imageUrl = '';
       const imgKey = Object.keys(p).find(k => p[k].type === 'files' || k.includes('圖'));
       if (imgKey && p[imgKey]?.files?.[0]) {
@@ -152,7 +145,7 @@ export default async function handler(req, res) {
 
       products.push({
         productName: parentInfo.name,
-        categories: parentInfo.categories,
+        categories: parentInfo.categories || ['伴手禮'],
         saleType: parentInfo.saleType,
         deadline: parentInfo.deadline,
         needDeposit: parentInfo.needDeposit,
