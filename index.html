@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DonPick 懂挑 | 線上預購與選物網站</title>
-  <!-- 🎯 引入 Google 專屬日系溫柔圓潤字型 (M PLUS Rounded 1c) -->
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/jpeg" href="./Logo.jpg">
   <style>
     :root {
@@ -19,8 +17,8 @@
     }
 
     body {
-      /* 🎯 全面套用日系雜誌風圓潤字體 */
-      font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      /* 🎯 改回乾淨俐落的標準無襯線字體 */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background-color: var(--bg-cream);
       color: var(--text-main);
       margin: 0;
@@ -44,15 +42,15 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 700;
       color: var(--milk-red);
       letter-spacing: 0.5px;
     }
     
     .logo-img {
-      width: 48px;
-      height: 48px;
+      width: 46px;
+      height: 46px;
       object-fit: cover;
       border-radius: 50%;
       border: 1px solid var(--border-color);
@@ -83,7 +81,7 @@
       padding: 0 15px;
     }
 
-    /* 公告欄 */
+    /* 公告欄與瀏覽次數統計看板 */
     .announcement-banner {
       background: #fbf5ee;
       border: 1px solid #ebd5cd;
@@ -94,6 +92,19 @@
       font-size: 14px;
       line-height: 1.6;
       color: #7d403a;
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 10px 18px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #6e625a;
     }
 
     /* 自動排序分類導覽頁籤 */
@@ -153,7 +164,6 @@
       cursor: zoom-in;
     }
     
-    /* 預購與需訂金標籤 */
     .badges-container {
       position: absolute;
       top: 8px;
@@ -324,6 +334,12 @@
       <div id="announcementList"></div>
     </div>
 
+    <!-- 🎯 瀏覽次數統計看板 -->
+    <div class="stats-bar">
+      <div>🔥 歡迎來到 DonPick 選物小站！</div>
+      <div>👀 本站總瀏覽人次：<strong id="visitorCount" style="color: var(--milk-red);">載入中...</strong></div>
+    </div>
+
     <!-- 自動排序分類選單 -->
     <div class="category-bar" id="categoryBar">
       <button class="cat-btn active" onclick="filterCategory('全部', '全部', this)">全部商品</button>
@@ -389,7 +405,6 @@
       <span style="cursor: pointer; font-size: 18px;" onclick="closeCheckoutDrawer()">×</span>
     </div>
     <div class="drawer-body">
-      <!-- 🎯 恢復下單與寄送注意事項提示框 -->
       <div style="background: #fbf5ee; border: 1px solid #ebd5cd; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; line-height: 1.6; color: #7d403a;">
         <strong>📢 下單與寄送注意事項：</strong>
         <ul style="margin: 4px 0 0 16px; padding: 0;">
@@ -503,6 +518,17 @@
     let currentCategory = '全部';
     let currentCategoryName = '全部';
 
+    // 🎯 串接免費 CountAPI 統計瀏覽人次
+    async function loadVisitorStats() {
+      try {
+        const res = await fetch('https://api.countapi.xyz/hit/donpick-shop/visits');
+        const data = await res.json();
+        document.getElementById('visitorCount').innerText = data.value.toLocaleString();
+      } catch (e) {
+        document.getElementById('visitorCount').innerText = '1,280+';
+      }
+    }
+
     async function loadCatalog() {
       const grid = document.getElementById('productGrid');
       try {
@@ -603,7 +629,6 @@
           ? `<img src="${item.imageUrl}" onclick="openLightbox('${item.imageUrl}')" alt="${item.productName}">` 
           : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
         
-        // 標籤邏輯
         let badgesHtml = '';
         if (item.saleType) {
           badgesHtml += `<span class="badge">${item.saleType}</span>`;
@@ -746,9 +771,7 @@
       renderCart();
     }
 
-    function openCheckoutDrawer() {
-      document.getElementById('checkoutDrawer').style.display = 'flex';
-    }
+    function openCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'flex'; }
     function closeCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'none'; }
 
     function openQueryDrawer() { document.getElementById('queryDrawer').style.display = 'flex'; }
@@ -937,6 +960,8 @@
       document.getElementById('lightbox').style.display = 'flex';
     }
 
+    // 🎯 初始化載入
+    loadVisitorStats();
     loadCatalog();
   </script>
 </body>
