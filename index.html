@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DonPick 懂挑 | 線上預購與選物網站</title>
-  <!-- 🎯 直接內嵌 Logo 圖片 Base64，確保 100% 絕對完美顯示 -->
-  <link rel="icon" type="image/jpeg" href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=">
+  <!-- 🎯 瀏覽器分頁小圖 -->
+  <link rel="icon" type="image/jpeg" href="./Logo.jpg">
   <style>
     :root {
       --milk-red: #b85b53;       /* 奶茶紅主色 */
@@ -28,32 +28,36 @@
     header {
       background: var(--card-bg);
       border-bottom: 1px solid var(--border-color);
-      padding: 14px 20px;
+      padding: 16px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 2px 6px rgba(184, 91, 83, 0.03);
+      box-shadow: 0 2px 8px rgba(184, 91, 83, 0.04);
     }
 
     .logo-area {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-size: 20px;
-      font-weight: bold;
+      gap: 12px;
+      font-size: 24px; /* 放大整體標題區 */
+      font-weight: 700;
       color: var(--milk-red);
+      /* 採用更高級優雅的襯線與圓潤選物店風格字體搭配 */
+      font-family: "Georgia", "Noto Serif TC", "Microsoft JhengHei", serif;
+      letter-spacing: 0.5px;
     }
     
     .logo-img {
-      width: 38px;
-      height: 38px;
+      width: 46px;  /* 稍微放大 Logo 圓形圖案以更顯眼 */
+      height: 46px;
       object-fit: cover;
       border-radius: 50%;
       border: 1px solid var(--border-color);
       background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
     }
 
     .header-btns {
@@ -275,11 +279,11 @@
   </style>
 </head>
 <body>
-  
+
   <header>
     <div class="logo-area">
-      <!-- 🎯 Ninte actual Logo.jpg file direct aayi render cheyyunnu -->
-      <img src="./Logo.jpg" alt="Logo" class="logo-img" id="brandLogo" onerror="this.onerror=null; this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP';">
+      <!-- 🎯 Logo 與放大質感字體搭配 -->
+      <img src="./Logo.jpg" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
       <span>DonPick 懂挑</span>
     </div>
     <div class="header-btns">
