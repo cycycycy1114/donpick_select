@@ -12,6 +12,7 @@
       color: #37352f;
       margin: 0;
       padding: 16px;
+      padding-bottom: 80px; /* 預留給底部浮動購物車按鈕的空間 */
     }
     .container {
       max-width: 800px;
@@ -19,62 +20,21 @@
     }
     header {
       text-align: center;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       background: white;
-      padding: 20px;
+      padding: 18px;
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     header h1 {
-      margin: 0 0 8px;
-      font-size: 22px;
+      margin: 0 0 6px;
+      font-size: 20px;
       color: #2eaadc;
     }
     header p {
       margin: 0;
-      font-size: 14px;
-      color: #666;
-    }
-
-    /* 買家資訊填寫區 */
-    .user-info-card {
-      background: white;
-      padding: 18px;
-      border-radius: 12px;
-      margin-bottom: 24px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    .user-info-card h3 {
-      margin-top: 0;
-      font-size: 16px;
-      color: #333;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 8px;
-    }
-    .form-group {
-      margin-bottom: 12px;
-    }
-    .form-group label {
-      display: block;
-      font-weight: 600;
       font-size: 13px;
-      margin-bottom: 6px;
-    }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      font-size: 14px;
-      background: #fff;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #2eaadc;
-    }
-    .contact-group {
-      display: flex;
-      gap: 8px;
+      color: #666;
     }
 
     /* 商品分類切換按鈕列 (Tabs) */
@@ -165,9 +125,7 @@
       font-weight: bold;
       cursor: pointer;
     }
-    .product-card-btn:hover {
-      background: #2589b2;
-    }
+    .product-card-btn:hover { background: #2589b2; }
 
     /* 規格選擇彈跳視窗 (Modal) */
     .modal-overlay {
@@ -193,11 +151,8 @@
     }
     .modal-close {
       position: absolute;
-      top: 12px;
-      right: 16px;
-      font-size: 22px;
-      cursor: pointer;
-      color: #aaa;
+      top: 12px; right: 16px;
+      font-size: 22px; cursor: pointer; color: #aaa;
     }
     .modal-close:hover { color: #333; }
     .styles-grid {
@@ -219,124 +174,161 @@
       background: #eef7fc;
     }
     .style-card img {
-      width: 100%;
-      height: 70px;
-      object-fit: cover;
-      border-radius: 6px;
-      background: #eee;
+      width: 100%; height: 70px; object-fit: cover; border-radius: 6px; background: #eee;
     }
 
-    /* 購物車與結帳區塊 */
-    .cart-card {
-      background: white;
-      padding: 18px;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      margin-top: 24px;
-    }
-    .cart-item {
+    /* 底部懸浮購物車按鈕 */
+    .floating-cart-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #2eaadc;
+      color: white;
+      padding: 14px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 13px;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+      z-index: 900;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .floating-cart-bar:hover { background: #2589b2; }
+
+    /* 結單畫面抽屜 / 區塊 (預設隱藏，點擊購物車後滑出) */
+    .checkout-drawer {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: flex-end;
+      z-index: 1100;
+    }
+    .checkout-content {
+      background: #f7f6f3;
+      width: 100%;
+      max-height: 90vh;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 0 -10px 25px rgba(0,0,0,0.2);
+    }
+    .user-info-card {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .user-info-card h3, .cart-card h3 {
+      margin-top: 0; font-size: 15px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 6px;
+    }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+    input, select {
+      width: 100%; padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px; background: #fff;
+    }
+    .contact-group { display: flex; gap: 8px; }
+
+    .cart-card {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .cart-item {
+      display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px;
     }
     .remove-btn {
-      background: #ff5252;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 3px 8px;
-      font-size: 11px;
-      cursor: pointer;
+      background: #ff5252; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer;
     }
     .price-summary {
-      background: #eef7fc;
-      padding: 12px;
-      border-radius: 6px;
-      margin: 16px 0;
-      font-size: 14px;
-      color: #0066cc;
-      display: flex;
-      justify-content: space-between;
-      font-weight: bold;
+      background: #eef7fc; padding: 10px; border-radius: 6px; margin: 12px 0; font-size: 14px; color: #0066cc; display: flex; justify-content: space-between; font-weight: bold;
     }
     button.submit-btn {
-      width: 100%;
-      padding: 12px;
-      background: #52c41a;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 16px;
-      cursor: pointer;
+      width: 100%; padding: 12px; background: #52c41a; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer;
     }
     button.submit-btn:hover { background: #389e0d; }
     button:disabled { background: #ccc; cursor: not-allowed; }
-    #msg { margin-top: 14px; text-align: center; font-weight: bold; font-size: 14px; }
+    #msg { margin-top: 10px; text-align: center; font-weight: bold; font-size: 13px; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <h1>🛍️ DonPick 懂挑 | 線上預購與選物網</h1>
-      <p>點選下方商品挑選規格，加入購物車即可快速下單</p>
+      <p>挑選心儀商品，點選規格加入購物車，輕鬆完成預購！</p>
     </header>
 
-    <!-- 1. 買家基本資料 -->
-    <div class="user-info-card">
-      <h3>👤 買家訂購資料</h3>
-      <div class="form-group">
-        <label>LINE社群暱稱 *</label>
-        <input type="text" id="nickname" required placeholder="例如：小明">
-      </div>
-      <div class="form-group">
-        <label>聯絡方式 *</label>
-        <div class="contact-group">
-          <select id="contactType" style="width: 35%;">
-            <option value="LINE ID">LINE ID</option>
-            <option value="IG 帳號">IG 帳號</option>
-          </select>
-          <input type="text" id="contactInfo" required placeholder="請輸入 ID 或帳號" style="width: 65%;">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>取貨方式 *</label>
-        <select id="deliverySelect" required>
-          <option value="7-11 店到店">7-11 店到店</option>
-          <option value="面交">面交</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- 2. 大型網拍風格：商品目錄專區與分類分頁 (Tabs) -->
+    <!-- 1. 商品目錄專區（首頁第一畫面） -->
     <div class="catalog-title">📦 商品目錄專區</div>
     
-    <!-- 分類按鈕列 -->
+    <!-- 分類按鈕列 (自動依照 Notion 分類生成) -->
     <div id="categoryTabs" class="category-tabs">
       <button type="button" class="cat-btn" onclick="filterCategory('全部', this)" style="background: #2eaadc; color: white;">全部商品</button>
     </div>
 
+    <!-- 商品網格牆 -->
     <div class="product-grid" id="productGrid">
       <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 20px;">載入商品資料中...</div>
     </div>
+  </div>
 
-    <!-- 3. 購物車與結帳區 -->
-    <div class="cart-card">
-      <h3 style="margin-top: 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px;">🛒 購物車清單</h3>
-      <div id="cartContainer">
-        <div style="color: #888; font-size: 13px; text-align: center; padding: 12px;" id="emptyCartText">購物車尚無商品，請點選上方商品加入</div>
+  <!-- 2. 底部懸浮購物車按鈕（隨時顯示目前選購數量與總金額） -->
+  <div class="floating-cart-bar" onclick="openCheckoutDrawer()">
+    <div>🛒 查看購物車與結帳 (<span id="floatCartCount">0</span> 件)</div>
+    <div>總計 $<span id="floatGrandTotal">0</span> ➔</div>
+  </div>
+
+  <!-- 3. 結單與填寫資料彈出視窗 (Drawer) -->
+  <div class="checkout-drawer" id="checkoutDrawer" onclick="closeCheckoutDrawerOnOutside(event)">
+    <div class="checkout-content" onclick="event.stopPropagation()">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="margin: 0; font-size: 17px; color: #2eaadc;">🛒 購物車與快速結單</h3>
+        <span style="font-size: 22px; cursor: pointer; color: #aaa;" onclick="closeCheckoutDrawer()">&times;</span>
       </div>
 
-      <div class="price-summary">
-        <span>總計品項：<span id="cartCount">0</span> 項</span>
-        <span>總金額：$<span id="grandTotal">0</span></span>
+      <!-- 買家資料填寫區 -->
+      <div class="user-info-card">
+        <h3>👤 買家訂購資料</h3>
+        <div class="form-group">
+          <label>LINE社群暱稱 *</label>
+          <input type="text" id="nickname" required placeholder="例如：小明">
+        </div>
+        <div class="form-group">
+          <label>聯絡方式 *</label>
+          <div class="contact-group">
+            <select id="contactType" style="width: 35%;">
+              <option value="LINE ID">LINE ID</option>
+              <option value="IG 帳號">IG 帳號</option>
+            </select>
+            <input type="text" id="contactInfo" required placeholder="請輸入 ID 或帳號" style="width: 65%;">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>取貨方式 *</label>
+          <select id="deliverySelect" required>
+            <option value="7-11 店到店">7-11 店到店</option>
+            <option value="面交">面交</option>
+          </select>
+        </div>
       </div>
 
-      <button type="button" class="submit-btn" id="submitBtn" onclick="submitOrder()">確認送出全部訂單</button>
-      <div id="msg"></div>
+      <!-- 購物車清單區 -->
+      <div class="cart-card">
+        <h3>🛍️ 已選購品項</h3>
+        <div id="cartContainer">
+          <div style="color: #888; font-size: 13px; text-align: center; padding: 10px;">購物車尚無商品</div>
+        </div>
+
+        <div class="price-summary">
+          <span>總計品項：<span id="cartCount">0</span> 項</span>
+          <span>總金額：$<span id="grandTotal">0</span></span>
+        </div>
+
+        <button type="button" class="submit-btn" id="submitBtn" onclick="submitOrder()">確認送出全部訂單</button>
+        <div id="msg"></div>
+      </div>
     </div>
   </div>
 
@@ -382,10 +374,7 @@
           return;
         }
 
-        // 1. 動態產生地區/分類按鈕
         generateCategoryTabs(allProducts);
-
-        // 2. 渲染商品
         renderFilteredProducts();
 
       } catch (e) {
@@ -416,10 +405,8 @@
       });
     }
 
-    // 切換分類
     function filterCategory(category, btnElement) {
       currentCategory = category;
-      
       document.querySelectorAll('.cat-btn').forEach(b => {
         b.style.background = 'white';
         b.style.color = '#2eaadc';
@@ -428,11 +415,9 @@
         btnElement.style.background = '#2eaadc';
         btnElement.style.color = 'white';
       }
-
       renderFilteredProducts();
     }
 
-    // 根據分類與名稱分組渲染商品
     function renderFilteredProducts() {
       const grid = document.getElementById('productGrid');
       const filtered = currentCategory === '全部' 
@@ -476,7 +461,6 @@
       });
     }
 
-    // 打開規格彈跳視窗
     function openModal(productName) {
       currentSelectedProduct = productName;
       const filtered = currentCategory === '全部' ? allProducts : allProducts.filter(p => p.category === currentCategory);
@@ -521,7 +505,6 @@
       document.getElementById('specModal').style.display = 'none';
     }
 
-    // 更新連動價格
     function updateModalPrice() {
       const qty = parseInt(document.getElementById('modalQuantity').value) || 1;
       if (currentSelectedStyle) {
@@ -534,7 +517,6 @@
       }
     }
 
-    // 將視窗中選擇的規格加入購物車
     function addModalItemToCart() {
       if (!currentSelectedProduct || !currentSelectedStyle) {
         alert("請選擇款式規格！");
@@ -560,24 +542,28 @@
       closeModal();
     }
 
-    // 渲染購物車列表
     function renderCart() {
       const container = document.getElementById('cartContainer');
       const cartCountEl = document.getElementById('cartCount');
       const grandTotalEl = document.getElementById('grandTotal');
+      const floatCartCount = document.getElementById('floatCartCount');
+      const floatGrandTotal = document.getElementById('floatGrandTotal');
+
+      let totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+      let grandTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
+
+      floatCartCount.innerText = totalCount;
+      floatGrandTotal.innerText = grandTotal;
 
       if (cart.length === 0) {
-        container.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 12px;">購物車尚無商品，請點選上方商品加入</div>';
+        container.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 10px;">購物車尚無商品</div>';
         cartCountEl.innerText = '0';
         grandTotalEl.innerText = '0';
         return;
       }
 
       container.innerHTML = '';
-      let grandTotal = 0;
-
       cart.forEach((item, index) => {
-        grandTotal += item.totalPrice;
         container.innerHTML += `
           <div class="cart-item">
             <div>
@@ -592,13 +578,32 @@
         `;
       });
 
-      cartCountEl.innerText = cart.length;
+      cartCountEl.innerText = totalCount;
       grandTotalEl.innerText = grandTotal;
     }
 
     function removeFromCart(index) {
       cart.splice(index, 1);
       renderCart();
+    }
+
+    // 控制結單畫面的開啟與關閉
+    function openCheckoutDrawer() {
+      if (cart.length === 0) {
+        alert("購物車是空的，請先挑選商品加入購物車！");
+        return;
+      }
+      document.getElementById('checkoutDrawer').style.display = 'flex';
+    }
+
+    function closeCheckoutDrawer() {
+      document.getElementById('checkoutDrawer').style.display = 'none';
+    }
+
+    function closeCheckoutDrawerOnOutside(event) {
+      if (event.target.id === 'checkoutDrawer') {
+        closeCheckoutDrawer();
+      }
     }
 
     // 提交訂單
@@ -613,7 +618,7 @@
         return;
       }
       if (cart.length === 0) {
-        alert("購物車是空的，請先挑選商品加入購物車！");
+        alert("購物車是空的！");
         return;
       }
 
@@ -643,8 +648,8 @@
           msg.innerHTML = `
             <div style="text-align: center; padding: 15px; line-height: 1.6; background: #fdfdfd; border: 2px dashed #4CAF50; border-radius: 10px; margin-top: 15px;">
               <h3 style="color: #2e7d32; margin-top: 0;">🎉 預購下單成功！感謝您的訂購！</h3>
-              <p style="font-size: 15px; font-weight: bold; color: #d32f2f;">📸 【請先將此畫面「截圖」保存】</p>
-              <p style="font-size: 14px;">請點擊下方連結私訊我們的 LINE 官方帳號，將截圖傳給我們！</p>
+              <p style="font-size: 14px; font-weight: bold; color: #d32f2f;">📸 【請先將此畫面「截圖」保存】</p>
+              <p style="font-size: 13px;">請點擊下方私訊 LINE 官方帳號將截圖傳給我們！</p>
             </div>
           `;
         } else {
