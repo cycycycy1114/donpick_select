@@ -277,7 +277,7 @@
 
   <header>
     <div class="logo-area">
-      <!-- 讀取專案中的 Logo.png -->
+      <!-- 🎯 讀取專案根目錄中的 Logo.png -->
       <img src="./Logo.png" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
       <span>DonPick 懂挑</span>
     </div>
@@ -444,8 +444,8 @@
         <input type="text" id="wishBudget" placeholder="例如：大約 1000 左右">
       </div>
       <div class="form-group">
-        <label>📷 上傳參考圖片 (選填)：</label>
-        <input type="file" id="wishImageFile" accept="image/*" onchange="previewWishImage(this)" style="padding: 4px; font-size: 12px;">
+        <label>📷 上傳參考圖片 (會自動壓縮)：</label>
+        <input type="file" id="wishImageFile" accept="image/*" onchange="compressAndPreviewWishImage(this)" style="padding: 4px; font-size: 12px;">
         <div id="wishImagePreviewContainer" style="margin-top: 8px; display: none;">
           <img id="wishImagePreview" style="max-height: 80px; border-radius: 6px; border: 1px solid var(--border-color);">
         </div>
@@ -823,17 +823,47 @@
       }
     }
 
-    function previewWishImage(input) {
-      if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          wishImageBase64 = e.target.result;
+    // 🎯 自動壓縮圖片並轉為極輕量 Base64 (防止 413 錯誤)
+    function compressAndPreviewWishImage(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 600; // 限制最大寬度 600px
+          const MAX_HEIGHT = 600; // 限制最大高度 600px
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // 壓縮為 JPEG，品質 0.6 (大幅縮減容量至數十 KB 內)
+          wishImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
+
           document.getElementById('wishImagePreview').src = wishImageBase64;
           document.getElementById('wishImagePreviewContainer').style.display = 'block';
         };
-        reader.readAsDataURL(file);
-      }
+      };
+      reader.readAsDataURL(file);
     }
 
     async function submitWish() {
@@ -848,7 +878,7 @@
 
       btn.disabled = true;
       msgEl.style.color = '#555';
-      msgEl.innerText = '⏳ 正在送出許願單與圖片...';
+      msgEl.innerText = '⏳ 正在送出許願單與壓縮圖片...';
 
       try {
         const res = await fetch('/api/wish', {
