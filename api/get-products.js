@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       
     const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   
-    const annDbId = process.env.ANNOUNCEMENT_DATABASE_ID;                         // 公告欄資料庫 ID
+    const annDbId = process.env.ANNOUNCEMENT_DB_ID;                         // 公告欄資料庫 ID
 
     if (!productDetailDbId) {
       return res.status(500).json({ success: false, error: '伺服器未設定 PRODUCT_DETAIL_DB_ID 環境變數' });
