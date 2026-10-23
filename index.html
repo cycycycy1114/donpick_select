@@ -445,17 +445,25 @@
       }
     }
     
-    // 📂 根據 A/C 表分類動態產生分頁籤 (正確讀取 categories 陣列，排除已結束與重複的全部)
+    // 📂 根據分類動態產生分頁籤 (完美相容字串與陣列分類，並在最後固定「已結單」)
     function buildCategories() {
       const bar = document.getElementById('categoryBar');
       if (!bar) return;
 
       const rawCats = [];
       allProducts.forEach(p => {
-        // 確保不是已結束，且 p.categories 是陣列
-        if (p.saleType !== '已結束' && p.categories && Array.isArray(p.categories)) {
-          p.categories.forEach(c => {
-            if (c && c.trim() !== '' && c.trim() !== '全部') {
+        // 如果不是已結束商品，開始收集分類
+        if (p.saleType !== '已結束') {
+          // 支援陣列或單一字串的分類欄位
+          let catsToProcess = [];
+          if (Array.isArray(p.categories)) {
+            catsToProcess = p.categories;
+          } else if (p.category) {
+            catsToProcess = [p.category];
+          }
+
+          catsToProcess.forEach(c => {
+            if (c && typeof c === 'string' && c.trim() !== '' && c.trim() !== '全部') {
               rawCats.push(c.trim());
             }
           });
@@ -466,7 +474,7 @@
       // 依照數字編號排序（例如 2_日本代購 -> 3_韓國代購）
       uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
-      // 頁籤順序：強制開頭放一個「全部」 -> 各個分類 -> 固定在最後的「已結單」
+      // 頁籤順序：全部 -> 各個分類 -> 已結單
       const categories = ['全部', ...uniqueRawCats, '已結單'];
       
       bar.innerHTML = '';
