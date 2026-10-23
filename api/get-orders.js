@@ -11,9 +11,9 @@ export default async function handler(req, res) {
 
   try {
     const keyword = (req.query.keyword || '').trim();
-    const dbId = process.env.DATABASE_ID;                      
-    const productDbId = process.env.PRODUCT_DB_ID;              
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID; 
+    const dbId = process.env.DATABASE_ID;                      // 訂單表 ID
+    const productDbId = process.env.PRODUCT_DB_ID;              // 主商品表 (B表 / A表) ID
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID; // 款式明細表 (C表) ID
 
     if (!dbId) {
       return res.status(500).json({ success: false, error: "缺少 DATABASE_ID 環境變數" });
@@ -23,27 +23,27 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '請輸入查詢的暱稱或聯絡帳號' });
     }
 
-    // 1. 建立 A 表（主商品表字典）
-    let aMapById = {};
+    // 1. 建立主商品表 (B表/A表) ID 到名稱的對照
+    let bMapById = {};
     if (productDbId) {
       try {
-        const aRes = await notion.databases.query({ database_id: productDbId, page_size: 100 });
-        if (aRes && aRes.results) {
-          aRes.results.forEach(page => {
+        const bRes = await notion.databases.query({ database_id: productDbId, page_size: 100 });
+        if (bRes && bRes.results) {
+          bRes.results.forEach(page => {
             const p = page?.properties || {};
             const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
             if (titleKey && p[titleKey]?.title && Array.isArray(p[titleKey].title) && p[titleKey].title.length > 0) {
               const name = p[titleKey].title.map(t => t?.plain_text || '').join('').trim();
-              if (name) aMapById[page.id] = name;
+              if (name) bMapById[page.id] = name;
             }
           });
         }
       } catch (e) {
-        console.warn('讀取 A 表失敗:', e.message);
+        console.warn('讀取主商品表失敗:', e.message);
       }
     }
 
-    // 2. 建立 C 表（款式明細表字典：對應款式名稱與圖片）
+    // 2. 建立款式明細表 (C表) 的圖片字典：嚴格透過「主商品名稱 + 款式名稱」來對應圖片
     let productDict = {};
     if (productDetailDbId) {
       try {
@@ -52,19 +52,22 @@ export default async function handler(req, res) {
           cRes.results.forEach(page => {
             const p = page?.properties || {};
 
+            // 抓取關聯到主商品表 (B表) 的 ID
             let parentName = '';
             const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
             if (relKey && p[relKey]?.relation && Array.isArray(p[relKey].relation) && p[relKey].relation.length > 0) {
               const relId = p[relKey].relation[0]?.id;
-              if (relId) parentName = aMapById[relId] || '';
+              if (relId) parentName = bMapById[relId] || '';
             }
 
+            // 抓取 C 表的款式名稱 (Title)
             let styleName = '標準款式';
             const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
             if (titleKey && p[titleKey]?.title && Array.isArray(p[titleKey].title) && p[titleKey].title.length > 0) {
               styleName = p[titleKey].title.map(t => t?.plain_text || '').join('').trim() || '標準款式';
             }
 
+            // 抓取 C 表的圖片
             let imageUrl = '';
             const imgKey = Object.keys(p).find(k => k[k]?.type === 'files');
             if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files) && p[imgKey].files.length > 0) {
@@ -72,14 +75,17 @@ export default async function handler(req, res) {
               imageUrl = fileObj?.file?.url || fileObj?.external?.url || '';
             }
 
-            if (parentName) {
+            if (parentName && imageUrl) {
               productDict[`${parentName}_${styleName}`] = imageUrl;
+              productDict[`${parentName}_標準款式`] = imageUrl; // 備用
             }
-            productDict[styleName] = imageUrl; // 備用
+            if (imageUrl) {
+              productDict[styleName] = imageUrl;
+            }
           });
         }
       } catch (e) {
-        console.warn('讀取 C 表字典失敗:', e.message);
+        console.warn('讀取款式明細表失敗:', e.message);
       }
     }
 
@@ -153,10 +159,12 @@ export default async function handler(req, res) {
           }
         });
 
-        // 🎯 智慧從 C 表字典對應圖片（優先用「商品_規格」，其次用「規格」或「商品」）
+        // 🎯 嚴格透過「主商品名稱_款式名稱」從 B ➔ C 字典中找出正確圖片
         const dictKey = `${product}_${spec}`;
         if (!imageUrl && productDict[dictKey]) {
           imageUrl = productDict[dictKey];
+        } else if (!imageUrl && productDict[`${product}_標準款式`]) {
+          imageUrl = productDict[`${product}_標準款式`];
         } else if (!imageUrl && productDict[spec]) {
           imageUrl = productDict[spec];
         } else if (!imageUrl && productDict[product]) {
