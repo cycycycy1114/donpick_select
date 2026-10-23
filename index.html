@@ -158,22 +158,25 @@
       z-index: 2;
     }
     
-    /* 🎨 各狀態專屬徽章配色 */
+    /* 🎨 優化後的狀態標籤配色 */
     .badge {
-      background: var(--milk-red); /* 預購中 / 一般狀態：奶紅色 */
+      background: #2b7a4b; /* 預購中：改為舒服有質感的墨綠色 */
       color: white;
       font-size: 11px;
-      padding: 4px 9px;
+      padding: 4px 10px;
       border-radius: 12px;
       font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
     .badge-deposit {
-      background: #fa8c16 !important; /* 需訂金：活力橘色 */
+      background: #e67e22 !important; /* 需訂金：活力橘 */
       color: white !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
     .badge-ended {
-      background: #6b7280 !important; /* 已結單：低調灰色 */
+      background: #718096 !important; /* 已結單：沉穩石墨灰 */
       color: white !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
 
     .product-info { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; }
@@ -192,8 +195,8 @@
       width: 100%;
     }
     .product-card-btn:hover { background: var(--milk-red-dark); }
-    .product-card-btn.ended-btn { background: #6b7280; }
-    .product-card-btn.ended-btn:hover { background: #4b5563; }
+    .product-card-btn.ended-btn { background: #718096; }
+    .product-card-btn.ended-btn:hover { background: #4a5568; }
 
     .lightbox-overlay {
       display: none;
@@ -567,14 +570,15 @@
         const isEndedCheck = (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false');
 
         if (isEndedCheck) {
-          // 🎨 已結單專屬灰色徽章
-          badgesHtml += `<span class="badge badge-ended">已結單</span>`;
+          badgesHtml += `<span class="badge badge-ended">已結單/斷貨</span>`;
           btnText = '🔍 瀏覽歷史紀錄';
           btnClass = 'product-card-btn ended-btn';
         } else {
-          // 🎨 預購中專屬奶紅色徽章
-          if (item.saleType) badgesHtml += `<span class="badge">${item.saleType}</span>`;
-          // 🎨 需訂金專屬活力橘色徽章
+          if (item.saleType) {
+            badgesHtml += `<span class="badge">${item.saleType}</span>`;
+          } else {
+            badgesHtml += `<span class="badge">預購中</span>`;
+          }
           if (item.needDeposit) badgesHtml += `<span class="badge badge-deposit">需訂金</span>`;
         }
 
@@ -588,8 +592,7 @@
         let deadlineHtml = '';
         if (item.deadline && !isEndedCheck) {
           let cleanDate = item.deadline.replace('T', ' ').substring(0, 16);
-          // ⏰ 收單倒數專屬亮橘黃色文字與警示感
-          deadlineHtml = `<div style="font-size: 11px; color: #d46b08; background: #fff7e6; border: 1px solid #ffd591; padding: 3px 6px; border-radius: 4px; margin-bottom: 6px; font-weight: bold;">⏰ 收單：${cleanDate}</div>`;
+          deadlineHtml = `<div style="font-size: 11px; color: #b85b53; background: #fff5f3; border: 1px solid #ebd5cd; padding: 4px 8px; border-radius: 6px; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 4px;">⏰ 收單：${cleanDate}</div>`;
         }
 
         grid.innerHTML += `
@@ -744,7 +747,7 @@
           <div class="cart-item">
             <div>
               <strong>${item.product}</strong><br>
-              <span style="color:#666;">規格: ${item.spec} x ${item.quantity}</span>
+              <span style="color:#666; font-size:12px;">規格: ${item.spec} x ${item.quantity}</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="color:var(--milk-red); font-weight:bold;">$${item.totalPrice}</span>
