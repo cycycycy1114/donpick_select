@@ -158,9 +158,8 @@
       z-index: 2;
     }
     
-    /* 🎨 優化後的狀態標籤配色 */
     .badge {
-      background: #2b7a4b; /* 預購中：改為舒服有質感的墨綠色 */
+      background: #2b7a4b; /* 預購中：墨綠色 */
       color: white;
       font-size: 11px;
       padding: 4px 10px;
@@ -174,7 +173,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
     .badge-ended {
-      background: #718096 !important; /* 已結單：沉穩石墨灰 */
+      background: #718096 !important; /* 已結單：石墨灰 */
       color: white !important;
       box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
@@ -817,6 +816,7 @@
       }
     };
 
+    // 🔍 串接 /api/get-orders 查詢歷史訂單
     window.searchOrders = async function() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
@@ -824,38 +824,28 @@
 
       container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">⏳ 查詢中...</div>';
       try {
-        const res = await fetch(`/api/search-orders?keyword=${encodeURIComponent(keyword)}`);
+        const res = await fetch(`/api/get-orders?keyword=${encodeURIComponent(keyword)}`);
         const data = await res.json();
+        
         if (data.success && data.orders && data.orders.length > 0) {
-          let html = '';
-          let totalUnpaid = 0;
+          let html = `<div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">找到 ${data.orders.length} 筆相關訂單：</div>`;
 
           data.orders.forEach(ord => {
-            totalUnpaid += (ord.unpaidAmount || 0);
             html += `
-              <div style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:12px; font-size:13px;">
-                <div style="display:flex; justify-content:between; font-weight:bold; color:var(--milk-red); margin-bottom:6px;">
-                  <span>訂單編號: ${ord.orderId || 'N/A'}</span>
-                  <span>${ord.date || ''}</span>
+              <div style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:12px; font-size:13px; line-height: 1.5;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--milk-red); margin-bottom:6px; border-bottom:1px dashed #eee; padding-bottom:6px;">
+                  <span>👤 ${ord.nickname} (${ord.contactInfo})</span>
+                  <span>📅 ${ord.createdAt}</span>
                 </div>
-                <div>買家: ${ord.nickname} (${ord.contact})</div>
-                <div>取貨: ${ord.delivery}</div>
-                <hr style="border:0; border-top:1px dashed #eee; margin:8px 0;">
-                <div style="font-weight:bold; margin-bottom:4px;">訂購品項：</div>
+                <div><strong>📦 品項：</strong>${ord.product} / <strong>規格：</strong>${ord.spec} x ${ord.quantity}</div>
+                <div><strong>💰 金額：</strong>$${ord.totalPrice} | <strong>取貨：</strong>${ord.delivery}</div>
+                <div><strong>狀態：</strong><span style="color: #d46b08; font-weight: bold;">[${ord.fulfillmentStatus}]</span> / <span style="color: #52c41a; font-weight: bold;">[${ord.paymentStatus}]</span></div>
+                ${ord.note ? `<div style="color: #666; margin-top: 4px;"><strong>📝 備註：</strong>${ord.note}</div>` : ''}
+              </div>
             `;
-            if (ord.items && Array.isArray(ord.items)) {
-              ord.items.forEach(it => {
-                html += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${it.product} (${it.spec}) x ${it.qty}</span><span>$${it.subtotal}</span></div>`;
-              });
-            }
-            html += `</div>`;
           });
 
-          container.innerHTML = `
-            <div style="background:#fbf5ee; border:1px solid #ebd5cd; border-radius:8px; padding:12px; margin-bottom:14px; font-weight:bold; color:#7d403a; text-align:center;">
-              💰 總尚未結清金額：NT$ ${totalUnpaid}
-            </div>
-          ` + html;
+          container.innerHTML = html;
         } else {
           container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">查無相關訂單紀錄</div>';
         }
