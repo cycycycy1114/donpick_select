@@ -453,7 +453,7 @@
       const rawCats = [];
       allProducts.forEach(p => {
         // 如果不是已結束商品，開始收集分類
-        if (p.saleType !== '已結束') {
+        if (p.saleType !== '已結單' || p.saleType !== '已結束' || p.saleType !== '斷貨') {
           // 支援陣列或單一字串的分類欄位
           let catsToProcess = [];
           if (Array.isArray(p.categories)) {
