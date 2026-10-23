@@ -444,27 +444,25 @@
         grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: red;">❌ 載入失敗</div>`;
       }
     }
-
-    // 📂 根據 A/C 表分類動態產生分頁籤 (將「已結束/斷貨」統一收在最右側的「已結單」頁籤)
+    
+    // 📂 根據分類動態產生分頁籤 (排除已結束，並在最後固定「已結單」頁籤)
     function buildCategories() {
       const bar = document.getElementById('categoryBar');
       if (!bar) return;
 
       const rawCats = [];
       allProducts.forEach(p => {
-        // 排除已結束或斷貨的商品，不讓它們進入一般國家的分類頁籤
-        if (p.saleType !== '已結束' && p.categories && Array.isArray(p.categories)) {
-          p.categories.forEach(c => {
-            if (c && c.trim() !== '') rawCats.push(c.trim());
-          });
+        // 只把未結束的商品分類納入上方頁籤列
+        if (p.saleType !== '已結束' && p.category && p.category.trim() !== '') {
+          rawCats.push(p.category.trim());
         }
       });
 
       const uniqueRawCats = [...new Set(rawCats)];
-      // 依照原始名稱（含數字）進行排序，讓您能用 2_、3_ 控制順序
+      // 依照數字編號排序（例如 2_日本代購 -> 3_韓國代購）
       uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
-      // 分頁籤順序：全部 -> 各個正常分類 -> 固定在最後的「已結單」
+      // 頁籤順序：全部 -> 各個分類 -> 已結單
       const categories = ['全部', ...uniqueRawCats, '已結單'];
       
       bar.innerHTML = '';
@@ -479,13 +477,11 @@
         }
 
         btn.innerText = displayName;
-        
-        // 點擊與篩選時帶入完整分類名稱
         btn.onclick = (e) => filterCategory(cat, e.target);
         bar.appendChild(btn);
       });
     }
-
+    
     function filterCategory(categoryName, btnEl) {
       currentCategory = categoryName;
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
@@ -493,10 +489,11 @@
       renderProducts(categoryName);
     }
 
-function renderProducts(cat) {
+    function renderProducts(cat) {
       const grid = document.getElementById('productGrid');
       let filtered = [];
 
+      // 1. 篩選對應的原始商品
       if (cat === '已結單') {
         filtered = allProducts.filter(p => p.saleType === '已結束');
       } else if (cat === '全部') {
@@ -510,7 +507,7 @@ function renderProducts(cat) {
         return;
       }
 
-      // 同品項合併邏輯（完整保留 saleType 與 deadline）
+      // 2. 🎯 自動將同品項合併群組（避免 C 表多個款式被拆開）
       const productGroups = {};
       filtered.forEach(p => {
         const name = p.productName || '精選商品';
@@ -527,11 +524,11 @@ function renderProducts(cat) {
         if (!productGroups[name].imageUrl && p.imageUrl) {
           productGroups[name].imageUrl = p.imageUrl;
         }
-        // 如果群組內有 deadline 或非預購的 saleType，優先保留
         if (p.deadline) productGroups[name].deadline = p.deadline;
         if (p.saleType && p.saleType !== '預購') productGroups[name].saleType = p.saleType;
       });
 
+      // 3. 渲染畫面
       grid.innerHTML = '';
       Object.values(productGroups).forEach(item => {
         const imgTag = item.imageUrl 
@@ -579,7 +576,6 @@ function renderProducts(cat) {
         `;
       });
     }
-
 
     function openModal(productName) {
       currentSelectedProduct = productName;
