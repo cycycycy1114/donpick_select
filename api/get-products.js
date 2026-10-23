@@ -165,7 +165,7 @@ export default async function handler(req, res) {
           imageUrl,
           deadline,
           description: parentData.description,
-          needDeposit: parentData.false
+          needDeposit: parentData.needDeposit
         });
       });
     }
