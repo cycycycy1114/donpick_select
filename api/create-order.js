@@ -46,6 +46,7 @@ export default async function handler(req, res) {
     const productProp = getPropName(['商品名稱', '品項', 'product', '商品']);
     const specProp = getPropName(['規格款式', '規格', '款式', 'spec']);
     const qtyProp = getPropName(['數量', 'qty', 'quantity']);
+    const unitPriceProp = getPropName(['單價', 'unitprice']); // 🎯 專門對應「單價」欄位
     const priceProp = getPropName(['總金額', '總價', '金額', 'price', 'total']);
     const deliveryProp = getPropName(['取貨方式', '寄送', 'delivery', '取貨']);
     const noteProp = getPropName(['備註', 'note', '許願']);
@@ -62,7 +63,7 @@ export default async function handler(req, res) {
         title: [{ text: { content: nickname || '訪客' } }]
       };
 
-      // 2. 聯絡帳號 (確保只放帳號內容，如 sS)
+      // 2. 聯絡帳號
       if (accountProp) {
         if (accountProp.type === 'rich_text') {
           properties[accountProp.name] = { rich_text: [{ text: { content: contactInfo } }] };
@@ -71,7 +72,7 @@ export default async function handler(req, res) {
         }
       }
 
-      // 3. 聯絡管道 (放類型，如 LINE ID)
+      // 3. 聯絡管道
       if (channelProp) {
         if (channelProp.type === 'select') {
           properties[channelProp.name] = { select: { name: contactType || 'LINE ID' } };
@@ -101,16 +102,23 @@ export default async function handler(req, res) {
       }
 
       // 6. 數量
+      const qty = item.quantity || 1;
       if (qtyProp && qtyProp.type === 'number') {
-        properties[qtyProp.name] = { number: item.quantity || 1 };
+        properties[qtyProp.name] = { number: qty };
       }
 
-      // 7. 總金額
+      // 7. 🎯 單價 (Unit Price)
+      const unitPrice = item.price || (item.totalPrice ? Math.round(item.totalPrice / qty) : 0);
+      if (unitPriceProp && unitPriceProp.type === 'number') {
+        properties[unitPriceProp.name] = { number: unitPrice };
+      }
+
+      // 8. 總金額
       if (priceProp && priceProp.type === 'number') {
-        properties[priceProp.name] = { number: item.totalPrice || 0 };
+        properties[priceProp.name] = { number: item.totalPrice || (unitPrice * qty) };
       }
 
-      // 8. 取貨方式
+      // 9. 取貨方式
       if (deliveryProp) {
         const delVal = delivery || '7-11 店到店';
         if (deliveryProp.type === 'select') {
@@ -120,12 +128,12 @@ export default async function handler(req, res) {
         }
       }
 
-      // 9. 備註
+      // 10. 備註
       if (noteProp && noteProp.type === 'rich_text') {
         properties[noteProp.name] = { rich_text: [{ text: { content: note || '' } }] };
       }
 
-      // 10. 商品圖片
+      // 11. 商品圖片
       if (imgProp && imgProp.type === 'files' && item.imageUrl) {
         properties[imgProp.name] = {
           files: [{
@@ -135,7 +143,7 @@ export default async function handler(req, res) {
         };
       }
 
-      // 11. 出貨狀態
+      // 12. 出貨狀態
       if (fulfillProp) {
         if (fulfillProp.type === 'status') {
           properties[fulfillProp.name] = { status: { name: '備貨中' } };
@@ -144,7 +152,7 @@ export default async function handler(req, res) {
         }
       }
 
-      // 12. 付款狀態
+      // 13. 付款狀態
       if (payProp) {
         if (payProp.type === 'status') {
           properties[payProp.name] = { status: { name: '未付款' } };
