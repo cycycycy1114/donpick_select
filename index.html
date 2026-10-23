@@ -70,7 +70,7 @@
     
     .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
 
-    /* 公告欄樣式 */
+    /* 📢 公告欄樣式 */
     .announcement-banner {
       background: #fbf5ee;
       border: 1px solid #ebd5cd;
@@ -96,7 +96,7 @@
       color: #6e625a;
     }
 
-    /* 分類分頁籤列 */
+    /* 📂 分類分頁籤列 */
     .category-bar {
       display: flex;
       gap: 8px;
@@ -189,7 +189,7 @@
     .product-card-btn.ended-btn { background: #888888; }
     .product-card-btn.ended-btn:hover { background: #666666; }
 
-    /* 圖片放大燈箱 (Lightbox) */
+    /* 🔍 圖片放大燈箱 (Lightbox) */
     .lightbox-overlay {
       display: none;
       position: fixed;
@@ -273,7 +273,7 @@
       <div>👀 本站總瀏覽人次：<strong id="visitorCount" style="color: var(--milk-red);">載入中...</strong></div>
     </div>
 
-    <!-- 動態分類分頁籤列 -->
+    <!-- 📂 動態分類分頁籤列 -->
     <div class="category-bar" id="categoryBar">
       <button class="cat-btn active" onclick="filterCategory('全部', this)">全部商品</button>
     </div>
@@ -292,7 +292,7 @@
     </div>
   </div>
 
-  <!-- 圖片放大燈箱 Modal -->
+  <!-- 🔍 圖片放大燈箱 Modal -->
   <div class="lightbox-overlay" id="lightboxModal" onclick="closeLightbox()">
     <img class="lightbox-content" id="lightboxImg">
   </div>
@@ -325,7 +325,7 @@
     </div>
   </div>
 
-  <!-- 結帳抽屜 -->
+  <!-- 🛒 結帳抽屜 -->
   <div class="drawer" id="checkoutDrawer">
     <div class="drawer-header">
       <span>🛒 您的購物車清單</span>
@@ -366,19 +366,23 @@
     </div>
   </div>
 
-  <!-- 查詢訂單 Drawer -->
+  <!-- 📋 查詢訂單 Drawer (完整修復) -->
   <div class="drawer" id="queryDrawer">
-    <div class="drawer-header"><span>🔍 查詢您的歷史訂單</span><span style="cursor: pointer;" onclick="closeQueryDrawer()">×</span></div>
+    <div class="drawer-header">
+      <span>🔍 查詢您的歷史訂單</span>
+      <span style="cursor: pointer;" onclick="closeQueryDrawer()">×</span>
+    </div>
     <div class="drawer-body">
-      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <div style="font-size: 13px; color: #666; margin-bottom: 12px;">請輸入您的社群暱稱或聯絡方式查詢已成立的訂單紀錄：</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
         <input type="text" id="queryKeyword" placeholder="輸入社群暱稱" style="flex-grow: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
-        <button type="button" onclick="searchOrders()" style="background: var(--milk-red); color: white; border: none; padding: 0 16px; border-radius: 6px; font-weight: bold;">查詢</button>
+        <button type="button" onclick="searchOrders()" style="background: var(--milk-red); color: white; border: none; padding: 0 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">查詢</button>
       </div>
       <div id="queryResultContainer"><div style="padding: 20px; text-align: center; color: #888;">尚未輸入查詢條件</div></div>
     </div>
   </div>
 
-  <!-- 許願 Drawer -->
+  <!-- ✨ 許願 Drawer -->
   <div class="drawer-overlay" id="wishDrawer" onclick="closeDrawerOnOutside(event, 'wishDrawer')">
     <div class="modal-card">
       <span onclick="closeWishDrawer()" class="modal-close">×</span>
@@ -415,10 +419,16 @@
         const res = await fetch('/api/get-products');
         const data = await res.json();
         if (data.success) {
+          // 📢 渲染公告
           if (data.announcements && data.announcements.length > 0) {
             const banner = document.getElementById('announcementBanner');
             const list = document.getElementById('announcementList');
             list.innerHTML = data.announcements.map(a => `• ${a}`).join('<br>');
+            banner.style.display = 'block';
+          } else if (data.announcement) {
+            const banner = document.getElementById('announcementBanner');
+            const list = document.getElementById('announcementList');
+            list.innerHTML = `• ${data.announcement}`;
             banner.style.display = 'block';
           }
 
@@ -693,7 +703,6 @@
     function openCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'flex'; }
     function closeCheckoutDrawer() { document.getElementById('checkoutDrawer').style.display = 'none'; }
     
-    // 🎯 確保查單 Drawer 正常開啟
     function openQueryDrawer() { document.getElementById('queryDrawer').style.display = 'flex'; }
     function closeQueryDrawer() { document.getElementById('queryDrawer').style.display = 'none'; }
     
