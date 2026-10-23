@@ -637,7 +637,11 @@
       let extraText = '';
       if (sample.deadline) {
         let cleanDate = sample.deadline.replace('T', ' ').substring(0, 16);
-        extraText += `⏰ 收單期限：${cleanDate}`;
+        if (cleanDate.length === 10) cleanDate += ' 17:00'; // 預設補上時間
+        extraText += `⏰ 收單日期：${cleanDate} `;
+      }
+      if (sample.needDeposit) {
+        extraText += `| 💰 需先付訂金`;
       }
       document.getElementById('modalProductExtra').innerText = extraText;
       document.getElementById('modalQuantity').value = 1;
