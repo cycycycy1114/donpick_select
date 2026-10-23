@@ -452,8 +452,8 @@
 
       const rawCats = [];
       allProducts.forEach(p => {
-        // 只把未結束的商品分類納入上方頁籤列
-        if (p.saleType !== '已結單' && p.category && p.category.trim() !== '') {
+        // 🎯 這裡必須是 '已結束'（對應後端判斷的已結束/斷貨標記）
+        if (p.saleType !== '已結束' && p.category && p.category.trim() !== '') {
           rawCats.push(p.category.trim());
         }
       });
@@ -465,7 +465,7 @@
       // 頁籤順序：全部 -> 各個分類 -> 已結單
       const categories = ['全部', ...uniqueRawCats, '已結單'];
       
-      bar.innerHTML = '';
+      bar.innerHTML = ``;
       categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = `cat-btn ${cat === currentCategory ? 'active' : ''}`;
