@@ -46,16 +46,14 @@ export default async function handler(req, res) {
     cRes.results.forEach(page => {
       const p = page.properties || {};
 
+      // 🎯 【精準鎖定款式名稱】：C 表的 Title（標題欄位，即「款式名稱」）
       let styleName = '標準款式';
-      const styleKey = Object.keys(p).find(k => p[k]?.type === 'title' || k.includes('款式') || k.includes('規格'));
-      if (styleKey && p[styleKey]) {
-        if (p[styleKey].type === 'title' && p[styleKey].title) {
-          styleName = p[styleKey].title.map(t => t.plain_text || '').join('') || '標準款式';
-        } else if (p[styleKey].type === 'rich_text' && p[styleKey].rich_text) {
-          styleName = p[styleKey].rich_text.map(t => t.plain_text || '').join('') || '標準款式';
-        }
+      const styleTitleKey = Object.keys(p).find(k => p[k]?.type === 'title');
+      if (styleTitleKey && p[styleTitleKey]?.title?.[0]) {
+        styleName = p[styleTitleKey].title.map(t => t.plain_text || '').join('') || '標準款式';
       }
 
+      // 取得主商品名稱 (優先透過 A表 Relation，若無則從 C表文字欄位抓)
       let productName = '';
       const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
       if (relKey && p[relKey]?.relation?.length > 0) {
@@ -77,7 +75,7 @@ export default async function handler(req, res) {
 
       if (!productName) productName = '精選商品';
 
-      // 🎯 【價格抓取強固版】：自動搜尋任何數字 (Number) 欄位，若有多個優先找名字包含「價格」、「售價」、「NT」的欄位
+      // 取得價格 (Number)
       let price = 0;
       const priceKeys = Object.keys(p).filter(k => p[k]?.type === 'number');
       if (priceKeys.length > 0) {
@@ -85,6 +83,7 @@ export default async function handler(req, res) {
         price = p[preferredPriceKey]?.number || 0;
       }
 
+      // 取得圖片 (Files)
       const imgKey = Object.keys(p).find(k => p[k]?.type === 'files');
       let imageUrl = '';
       if (imgKey && p[imgKey]?.files?.length > 0) {
@@ -92,6 +91,7 @@ export default async function handler(req, res) {
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
       }
 
+      // 取得狀態 (支援 Select, Status 或 Formula)
       let saleType = '預購';
       const typeKey = Object.keys(p).find(k => k.includes('狀態') || k.includes('saleType') || k.includes('type'));
       if (typeKey && p[typeKey]) {
@@ -145,15 +145,13 @@ export default async function handler(req, res) {
       });
     });
 
-    // 3. 🎯 【公告欄精準抓取版】：優先抓取「內容」或「說明」，並支援 status 欄位過濾
+    // 3. 查詢公告欄資料庫
     let announcements = [];
     if (annDbId) {
       try {
         const annRes = await notion.databases.query({ database_id: annDbId, page_size: 10 });
         announcements = annRes.results.map(page => {
           const p = page.properties || {};
-          
-          // 檢查 status 欄位，若為隱藏/關閉則略過
           let isHidden = false;
           const statusKey = Object.keys(p).find(k => k.includes('狀態') || k.includes('status') || p[k]?.type === 'status' || p[k]?.type === 'select');
           if (statusKey && p[statusKey]) {
@@ -163,13 +161,11 @@ export default async function handler(req, res) {
           if (isHidden) return null;
 
           let contentText = '';
-          // 優先找包含「內容」、「說明」、「公告」的 Rich Text 欄位
           const contentKey = Object.keys(p).find(k => (k.includes('內容') || k.includes('說明') || k.includes('公告')) && p[k]?.type === 'rich_text');
           if (contentKey && p[contentKey]?.rich_text?.length > 0) {
             contentText = p[contentKey].rich_text.map(t => t.plain_text || '').join('');
           }
 
-          // 如果找不到「內容」欄位，退回抓取任何 Rich Text 或 Title
           if (!contentText) {
             Object.keys(p).forEach(k => {
               const prop = p[k];
