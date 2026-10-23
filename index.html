@@ -573,7 +573,7 @@
         const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
         const isEndedCheck = (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false');
 
-        let badgesHtml = ''; // 宣告在最外層，確保整個迴圈都抓得到
+       //let badgesHtml = ''; // 宣告在最外層，確保整個迴圈都抓得到
 
         if (isEndedCheck) {
           badgesHtml += `<span class="badge badge-ended">已結單</span>`;
