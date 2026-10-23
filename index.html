@@ -493,19 +493,16 @@
       renderProducts(categoryName);
     }
 
-    function renderProducts(cat) {
+function renderProducts(cat) {
       const grid = document.getElementById('productGrid');
       let filtered = [];
 
       if (cat === '已結單') {
-        // 點擊最右側的「已結單」時，專門顯示狀態為已結束或斷貨的商品
         filtered = allProducts.filter(p => p.saleType === '已結束');
       } else if (cat === '全部') {
-        // 點擊「全部」時，預設只顯示尚未結束的正常商品
         filtered = allProducts.filter(p => p.saleType !== '已結束');
       } else {
-        // 點擊各個國家分類時，過濾出該分類且尚未結束的商品
-        filtered = allProducts.filter(p => p.saleType !== '已結束' && p.categories && p.categories.includes(cat));
+        filtered = allProducts.filter(p => p.saleType !== '已結束' && p.category === cat);
       }
 
       if (filtered.length === 0) {
@@ -513,7 +510,7 @@
         return;
       }
 
-      // 同品項合併邏輯
+      // 同品項合併邏輯（完整保留 saleType 與 deadline）
       const productGroups = {};
       filtered.forEach(p => {
         const name = p.productName || '精選商品';
@@ -530,6 +527,9 @@
         if (!productGroups[name].imageUrl && p.imageUrl) {
           productGroups[name].imageUrl = p.imageUrl;
         }
+        // 如果群組內有 deadline 或非預購的 saleType，優先保留
+        if (p.deadline) productGroups[name].deadline = p.deadline;
+        if (p.saleType && p.saleType !== '預購') productGroups[name].saleType = p.saleType;
       });
 
       grid.innerHTML = '';
@@ -546,7 +546,7 @@
           badgesHtml += `<span class="badge badge-ended">已結單</span>`;
           btnText = '🔍 瀏覽歷史紀錄';
           btnClass = 'product-card-btn ended-btn';
-        } else if (item.saleType && item.saleType !== '預購') {
+        } else if (item.saleType) {
           badgesHtml += `<span class="badge">${item.saleType}</span>`;
         }
 
@@ -557,6 +557,12 @@
           priceText = minPrice === maxPrice ? `NT$ ${minPrice}` : `NT$ ${minPrice} 起`;
         }
 
+        let deadlineHtml = '';
+        if (item.deadline && item.saleType !== '已結束') {
+          let cleanDate = item.deadline.replace('T', ' ').substring(0, 16);
+          deadlineHtml = `<div style="font-size: 11px; color: #d46b08; margin-bottom: 6px; font-weight: bold;">⏰ 收單：${cleanDate}</div>`;
+        }
+
         grid.innerHTML += `
           <div class="product-card">
             <div class="product-img-wrapper">
@@ -565,6 +571,7 @@
             </div>
             <div class="product-info">
               <div class="product-title">${item.productName}</div>
+              ${deadlineHtml}
               <div class="product-price">${priceText}</div>
               <button type="button" class="${btnClass}" onclick="openModal('${item.productName}')">${btnText}</button>
             </div>
@@ -572,6 +579,7 @@
         `;
       });
     }
+
 
     function openModal(productName) {
       currentSelectedProduct = productName;
