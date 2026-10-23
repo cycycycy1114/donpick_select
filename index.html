@@ -403,6 +403,7 @@
     let cart = [];
     let currentCategory = '全部';
 
+    // 瀏覽人次計數器 (CountAPI)
     async function loadVisitorStats() {
       try {
         const res = await fetch('https://api.countapi.xyz/hit/donpick-shop/visits');
@@ -419,12 +420,11 @@
         const res = await fetch('/api/get-products');
         const data = await res.json();
         if (data.success) {
-          // 📢 動態渲染 Notion 公告欄 (支援多則公告條列)
           if (data.announcements && data.announcements.length > 0) {
             const banner = document.getElementById('announcementBanner');
             const list = document.getElementById('announcementList');
             list.innerHTML = '';
-            data.announcements.forEach((annText, idx) => {
+            data.announcements.forEach((annText) => {
               const itemDiv = document.createElement('div');
               itemDiv.style.paddingLeft = '6px';
               itemDiv.style.borderLeft = '3px solid var(--milk-red)';
@@ -445,16 +445,17 @@
       }
     }
     
-    // 📂 根據分類動態產生分頁籤 (完美相容字串與陣列分類，並在最後固定「已結單」)
     function buildCategories() {
       const bar = document.getElementById('categoryBar');
       if (!bar) return;
 
       const rawCats = [];
       allProducts.forEach(p => {
-        // 如果不是已結束商品，開始收集分類
-        if (p.saleType !== '已結單' || p.saleType !== '已結束' || p.saleType !== '斷貨') {
-          // 支援陣列或單一字串的分類欄位
+        const s = String(p.saleType || '').trim();
+        const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
+        const isEndedItem = (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false');
+
+        if (!isEndedItem) {
           let catsToProcess = [];
           if (Array.isArray(p.categories)) {
             catsToProcess = p.categories;
@@ -471,10 +472,8 @@
       });
 
       const uniqueRawCats = [...new Set(rawCats)];
-      // 依照數字編號排序（例如 2_日本代購 -> 3_韓國代購）
       uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
-      // 頁籤順序：全部 -> 各個分類 -> 已結單
       const categories = ['全部', ...uniqueRawCats, '已結單'];
       
       bar.innerHTML = '';
@@ -482,7 +481,6 @@
         const btn = document.createElement('button');
         btn.className = `cat-btn ${cat === currentCategory ? 'active' : ''}`;
         
-        // 🎯 自動過濾掉開頭的數字、底線、減號與空格（例如 "2_日本代購" 變成 "日本代購"）
         let displayName = cat;
         if (cat !== '全部' && cat !== '已結單') {
           displayName = cat.replace(/^[\d\s_\-]+/, ''); 
@@ -505,28 +503,23 @@
       const grid = document.getElementById('productGrid');
       let filtered = [];
 
-      // 🎯 核心邏輯：先檢查商品本身的狀態，而不是先看點了什麼頁籤
       filtered = allProducts.filter(p => {
         const s = String(p.saleType || '').trim();
-        const isEndedItem = (s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true');
+        const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
+        const isEndedItem = (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false');
 
-        // 1. 如果點擊的是「已結單」頁籤：只抓取狀態為已結束的商品
         if (cat === '已結單') {
           return isEndedItem;
         }
 
-        // 2. 如果點擊的是一般頁籤（「全部」或各個國家分類）：
-        // 🛑 如果這件商品本身已經是已結單/斷貨，直接過濾掉（絕不讓它出現在一般分類或全部裡面）
         if (isEndedItem) {
           return false;
         }
 
-        // 3. 如果點擊的是「全部」：保留所有未結束的正常商品
         if (cat === '全部') {
           return true;
         }
 
-        // 4. 如果點擊的是特定國家分類（如日本代購）：進行智慧模糊比對
         if (!p.categories || !Array.isArray(p.categories)) return false;
         return p.categories.some(c => {
           if (!c) return false;
@@ -541,7 +534,6 @@
         return;
       }
 
-      // 同品項合併邏輯
       const productGroups = {};
       filtered.forEach(p => {
         const name = p.productName || '精選商品';
@@ -562,14 +554,17 @@
         if (p.deadline) productGroups[name].deadline = p.deadline;
         
         const s = String(p.saleType || '').trim();
-        if (s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true') {
+        const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
+        if (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false') {
           productGroups[name].saleType = '已結束';
         } else if (p.saleType && p.saleType !== '預購') {
           productGroups[name].saleType = p.saleType;
         }
+        if (p.needDeposit) {
+          productGroups[name].needDeposit = true;
+        }
       });
 
-      // 渲染畫面
       grid.innerHTML = '';
       Object.values(productGroups).forEach(item => {
         const imgTag = item.imageUrl 
@@ -581,7 +576,10 @@
         let btnClass = 'product-card-btn';
 
         const s = String(item.saleType || '').trim();
-        if (s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true') {
+        const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
+        const isEndedCheck = (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false');
+
+        if (isEndedCheck) {
           badgesHtml += `<span class="badge badge-ended">已結單</span>`;
           btnText = '🔍 瀏覽歷史紀錄';
           btnClass = 'product-card-btn ended-btn';
@@ -598,7 +596,6 @@
         }
 
         let deadlineHtml = '';
-        const isEndedCheck = s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true';
         if (item.deadline && !isEndedCheck) {
           let cleanDate = item.deadline.replace('T', ' ').substring(0, 16);
           deadlineHtml = `<div style="font-size: 11px; color: #d46b08; margin-bottom: 6px; font-weight: bold;">⏰ 收單：${cleanDate}</div>`;
@@ -625,7 +622,9 @@
       currentSelectedProduct = productName;
       const matchedStyles = allProducts.filter(p => p.productName === productName);
       const sample = matchedStyles[0] || {};
-      const isEnded = (sample.saleType === '已結束');
+      const s = String(sample.saleType || '').trim();
+      const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
+      const isEnded = (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false');
 
       document.getElementById('modalProductName').innerText = productName;
       
@@ -706,7 +705,9 @@
     function addModalItemToCart() {
       if (!currentSelectedProduct || !currentSelectedStyle) { alert("請選擇款式規格！"); return; }
       const sample = allProducts.find(p => p.productName === currentSelectedProduct);
-      if (sample && sample.saleType === '已結束') {
+      const s = String(sample?.saleType || '').trim();
+      const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
+      if (sample && (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false')) {
         alert("此商品已結單，無法加入購物車！");
         return;
       }
@@ -779,7 +780,10 @@
 
     async function submitOrder() {
       const nickname = document.getElementById('nickname').value.trim();
+      const contactType = document.getElementById('contactType').value;
       const contactInfo = document.getElementById('contactInfo').value.trim();
+      const delivery = document.getElementById('deliverySelect').value;
+      const note = document.getElementById('orderNote').value.trim();
       const btn = document.getElementById('submitBtn');
       const msg = document.getElementById('msg');
 
@@ -787,165 +791,140 @@
       if (cart.length === 0) { alert("購物車是空的！"); return; }
 
       btn.disabled = true;
-      msg.innerText = '⏳ 訂單傳送中...';
-
-      const data = {
-        nickname,
-        contactType: document.getElementById('contactType').value,
-        contactInfo,
-        delivery: document.getElementById('deliverySelect').value,
-        note: document.getElementById('orderNote').value.trim(),
-        items: cart
-      };
+      msg.style.color = '#666';
+      msg.innerText = '正在送出訂單...';
 
       try {
         const res = await fetch('/api/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+          body: JSON.stringify({
+            nickname,
+            contactType,
+            contactInfo,
+            delivery,
+            note,
+            items: cart
+          })
         });
-        const result = await res.json();
-        if (!result.success) throw new Error(result.error || '送出失敗');
-
-        msg.style.color = '#52c41a';
-        msg.innerText = '🎉 訂單送出成功！';
-        cart = [];
-        renderCart();
-        setTimeout(() => { closeCheckoutDrawer(); msg.innerText = ''; btn.disabled = false; }, 1500);
+        const data = await res.json();
+        if (data.success) {
+          msg.style.color = 'green';
+          msg.innerText = '✅ 訂單送出成功！';
+          cart = [];
+          renderCart();
+          setTimeout(() => {
+            closeCheckoutDrawer();
+            msg.innerText = '';
+            btn.disabled = false;
+          }, 1500);
+        } else {
+          msg.style.color = 'red';
+          msg.innerText = '❌ 送出失敗: ' + (data.error || '未知錯誤');
+          btn.disabled = false;
+        }
       } catch (err) {
-        msg.style.color = '#ff4d4f';
-        msg.innerText = '❌ 錯誤：' + err.message;
+        msg.style.color = 'red';
+        msg.innerText = '❌ 網路連線錯誤';
         btn.disabled = false;
       }
     }
 
-    // 🎯 完整查單功能：支援同單同筆、品項明細、縮圖、金流與總尚未結清金額
     async function searchOrders() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
+      if (!keyword) { alert("請輸入查詢暱稱！"); return; }
 
-      if (!keyword) {
-        alert("請輸入要查詢的暱稱或聯絡帳號！");
-        return;
-      }
-
-      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 13px;">⏳ 正在查詢訂單記錄中...</div>';
-
+      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">⏳ 查詢中...</div>';
       try {
-        const res = await fetch(`/api/get-orders?keyword=${encodeURIComponent(keyword)}`);
+        const res = await fetch(`/api/search-orders?keyword=${encodeURIComponent(keyword)}`);
         const data = await res.json();
+        if (data.success && data.orders && data.orders.length > 0) {
+          let html = '';
+          let totalUnpaid = 0;
 
-        if (!data.success) {
-          throw new Error(data.error || '查詢失敗');
-        }
-
-        const orders = data.orders || [];
-
-        if (orders.length === 0) {
-          container.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: #d32f2f; background: #fff5f5; border-radius: 8px; font-size: 13px;">
-              查無符合 「${keyword}」 的訂單記錄。<br>若剛下單請稍候，或私訊 LINE 客服確認！
-            </div>
-          `;
-          return;
-        }
-
-        let grandTotalAll = 0;
-        let totalUnpaidAll = 0;
-
-        orders.forEach(ord => {
-          grandTotalAll += (ord.grandTotal || 0);
-          totalUnpaidAll += (ord.unpaidTotal || 0);
-        });
-
-        let htmlContent = `
-          <div style="background: linear-gradient(135deg, #fffbe6, #fff1b8); border: 1px solid #ffe58f; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #8c6b00; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-            <div><strong>📊 買家查詢結算：</strong>共找到 ${orders.length} 筆訂單</div>
-            <div style="text-align: right;">
-              <span style="margin-right: 12px;">總消費：$${grandTotalAll}</span>
-              <span style="color: #d32f2f; font-weight: bold; font-size: 14px;">🔥 總尚未結清：$${totalUnpaidAll}</span>
-            </div>
-          </div>
-          <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">訂單明細列表：</div>
-        `;
-
-        orders.forEach(ord => {
-          let itemsHtml = '';
-          if (ord.items && Array.isArray(ord.items)) {
-            ord.items.forEach(item => {
-              const imgThumbTag = item.imageUrl 
-                ? `<img src="${item.imageUrl}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: #eee; cursor: zoom-in;" onclick="openLightbox('${item.imageUrl}')">`
-                : `<div style="width: 36px; height: 36px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #999;">無圖</div>`;
-
-              itemsHtml += `
-                <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed #eee;">
-                  ${imgThumbTag}
-                  <div style="flex-grow: 1;">
-                    <strong>${item.product}</strong><br>
-                    <span style="color:#666; font-size:12px;">規格：<span style="color: #2eaadc; font-weight: bold;">${item.spec}</span> x ${item.quantity}</span>
-                  </div>
-                  <div style="color: var(--milk-red); font-weight: bold;">$${item.totalPrice || (item.price * item.quantity)}</div>
+          data.orders.forEach(ord => {
+            totalUnpaid += (ord.unpaidAmount || 0);
+            html += `
+              <div style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:12px; font-size:13px;">
+                <div style="display:flex; justify-content:between; font-weight:bold; color:var(--milk-red); margin-bottom:6px;">
+                  <span>訂單編號: ${ord.orderId || 'N/A'}</span>
+                  <span>${ord.date || ''}</span>
                 </div>
-              `;
-            });
-          } else {
-            itemsHtml = `<div>• <strong>${ord.product}</strong> / 規格：${ord.spec} x ${ord.quantity}</div>`;
-          }
+                <div>買家: ${ord.nickname} (${ord.contact})</div>
+                <div>取貨: ${ord.delivery}</div>
+                <hr style="border:0; border-top:1px dashed #eee; margin:8px 0;">
+                <div style="font-weight:bold; margin-bottom:4px;">訂購品項：</div>
+            `;
+            if (ord.items && Array.isArray(ord.items)) {
+              ord.items.forEach(it => {
+                html += `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>${it.product} (${it.spec}) x ${it.qty}</span><span>$${it.subtotal}</span></div>`;
+              });
+            }
+            html += `</div>`;
+          });
 
-          htmlContent += `
-            <div style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">
-                <span style="font-weight: bold; color: var(--milk-red); font-size: 14px;">👤 ${ord.nickname} (${ord.contactInfo})</span>
-                <span style="color: #888; font-size: 12px;">📅 ${ord.createdAt}</span>
-              </div>
-              <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px;">${itemsHtml}</div></div>
-              <div style="display: flex; justify-content: space-between; background: var(--cream-light); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
-                <span><strong>💰 該筆總金額：</strong>$${ord.grandTotal || ord.totalPrice}</span>
-                <span style="color: #d32f2f; font-weight: bold;">⚠️ 尚未結清：$${ord.unpaidTotal !== undefined ? ord.unpaidTotal : (ord.grandTotal || ord.totalPrice)}</span>
-              </div>
-              <div><strong>取貨方式：</strong>${ord.delivery} | <strong>狀態：</strong><span style="color: #d46b08; font-weight: bold;">[${ord.fulfillmentStatus}]</span> / <span style="color: #52c41a; font-weight: bold;">[${ord.paymentStatus}]</span></div>
-              ${ord.note ? `<div style="color: #666; margin-top: 4px;"><strong>📝 備註：</strong>${ord.note}</div>` : ''}
+          container.innerHTML = `
+            <div style="background:#fbf5ee; border:1px solid #ebd5cd; border-radius:8px; padding:12px; margin-bottom:14px; font-weight:bold; color:#7d403a; text-align:center;">
+              💰 總尚未結清金額：NT$ ${totalUnpaid}
             </div>
-          `;
-        });
-
-        container.innerHTML = htmlContent;
-
-      } catch (err) {
-        container.innerHTML = `<div style="padding: 20px; text-align: center; color: red; font-size: 13px;">❌ 查詢發生錯誤：${err.message}</div>`;
+          ` + html;
+        } else {
+          container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">查無相關訂單紀錄</div>';
+        }
+      } catch (e) {
+        container.innerHTML = '<div style="padding: 20px; text-align: center; color: red;">❌ 查詢發生錯誤</div>';
       }
     }
 
     async function submitWish() {
-      const contactInfo = document.getElementById('wishContact').value.trim();
-      const productName = document.getElementById('wishProductName').value.trim();
+      const contact = document.getElementById('wishContact').value.trim();
+      const product = document.getElementById('wishProductName').value.trim();
       const location = document.getElementById('wishLocation').value.trim();
       const budget = document.getElementById('wishBudget').value.trim();
-      const msgEl = document.getElementById('wishMsg');
+      const msg = document.getElementById('wishMsg');
+      const btn = document.getElementById('wishSubmitBtn');
 
-      if (!productName) { alert("請填寫想許願的商品名稱！"); return; }
-      msgEl.innerText = '⏳ 正在送出許願單...';
+      if (!contact || !product) { alert("請填寫聯絡人與想許願的商品！"); return; }
+
+      btn.disabled = true;
+      msg.style.color = '#666';
+      msg.innerText = '送出中...';
 
       try {
         const res = await fetch('/api/wish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nickname: contactInfo, contactInfo, productName, location, budget })
+          body: JSON.stringify({ contact, product, location, budget })
         });
         const data = await res.json();
-        if (!data.success) throw new Error(data.error);
-
-        msgEl.style.color = '#52c41a';
-        msgEl.innerText = '🎉 許願成功！';
-        setTimeout(() => { closeWishDrawer(); msgEl.innerText = ''; }, 2000);
-      } catch (err) {
-        msgEl.style.color = '#d32f2f';
-        msgEl.innerText = '❌ 錯誤：' + err.message;
+        if (data.success) {
+          msg.style.color = 'green';
+          msg.innerText = '🎁 許願成功，已通知管理員！';
+          setTimeout(() => {
+            closeWishDrawer();
+            msg.innerText = '';
+            btn.disabled = false;
+            document.getElementById('wishProductName').value = '';
+            document.getElementById('wishLocation').value = '';
+            document.getElementById('wishBudget').value = '';
+          }, 1500);
+        } else {
+          msg.style.color = 'red';
+          msg.innerText = '❌ 送出失敗';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        msg.style.color = 'red';
+        msg.innerText = '❌ 網路錯誤';
+        btn.disabled = false;
       }
     }
 
-    loadVisitorStats();
-    loadCatalog();
+    window.onload = () => {
+      loadVisitorStats();
+      loadCatalog();
+    };
   </script>
 </body>
 </html>
