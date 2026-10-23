@@ -1,0 +1,52 @@
+name: CI and Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main # 建議：只有當程式碼推送到主分支 (main) 時才觸發測試與部署
+  pull_request:
+    branches:
+      - main # 建議：別人發 PR 想合併到 main 時，也自動跑測試幫你把關
+
+jobs:
+  # 第一階段：嚴格把關 (CI)
+  test_and_verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (使用快取，速度加倍)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm' # 💡 建議：啟用快取，這樣每次執行不用從頭下載套件，速度會快非常多
+
+      - name: Install dependencies
+        run: npm ci # 💡 建議：在 CI 流程中使用 npm ci 代替 npm install，確保安裝的套件版本跟你的 lock 檔完全一致
+
+      - name: 1. 語法與風格檢查 (Lint)
+        run: npm run lint --if-present # 💡 建議：加上 --if-present，如果專案還沒設定 ESLint 也不會報錯卡住
+
+      - name: 2. 執行單元測試 (Test)
+        run: npm run test --if-present
+
+      - name: 3. 嘗試在本機建置 (Build Test)
+        run: npm run build # 💡 強烈建議：在給 Vercel 之前先自己打包一次，確認沒有打錯字或漏掉檔案
+
+  # 第二階段：確認安全，通知 Vercel 部署 (CD)
+  deploy:
+    needs: test_and_verify # 關鍵設定：必須等上面的檢查「全部通過」，這台部署機器人才會開工
+    if: github.event_name == 'push' # 💡 建議：如果是 Pull Request 只要跑測試就好，真的 Push/Merge 進 main 才觸發部署
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.ORG_ID }}
+          vercel-project-id: ${{ secrets.PROJECT_ID }}
+          vercel-args: '--prod'
