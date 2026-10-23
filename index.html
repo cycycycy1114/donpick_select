@@ -823,7 +823,7 @@
       }
     };
     
-    // 🛡️ 隱私遮罩函式：將聯絡 ID 或帳號進行部分隱藏（例如 ghhadrak -> gh****ak）
+   // 🛡️ 隱私遮罩函式：將聯絡 ID 或帳號進行部分隱藏（例如 ghhadrak -> gh****ak）
     function maskContact(contact) {
       if (!contact || contact.length <= 4) return '****';
       const start = contact.substring(0, 2);
@@ -831,8 +831,8 @@
       const stars = '*'.repeat(Math.min(contact.length - 4, 6));
       return start + stars + end;
     }
-    
-    // 🔍 查單功能：完美修復排版與個資顯示
+
+    // 🔍 查單功能：完美修復排版與個資隱私遮罩
     window.searchOrders = async function() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
@@ -852,7 +852,7 @@
             totalUnpaidAll += (ord.unpaidTotal || 0);
           });
 
-          // 🎯 改善黃色結算看板排版（改為上下區塊，絕不擠壓錯位）
+          // 🎯 改善黃色結算看板排版（上下區塊，絕不擠壓錯位）
           let htmlContent = `
             <div style="background: linear-gradient(135deg, #fffbe6, #fff1b8); border: 1px solid #ffe58f; padding: 14px 16px; border-radius: 10px; margin-bottom: 14px; font-size: 13px; color: #8c6b00; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
               <div style="font-weight: bold; margin-bottom: 6px; display: flex; justify-content: space-between;">
@@ -888,11 +888,11 @@
 
             // 🛡️ 套用 maskContact 隱私遮罩保護買家 ID
             const maskedContact = maskContact(ord.contactInfo);
-            
+
             htmlContent += `
               <div style="background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
                 <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                  <span style="font-weight: bold; color: var(--milk-red); font-size: 14px;">👤 ${ord.nickname} <span style="color:#666; font-weight:normal; font-size:12px;">(${ord.contactInfo})</span></span>
+                  <span style="font-weight: bold; color: var(--milk-red); font-size: 14px;">👤 ${ord.nickname} <span style="color:#666; font-weight:normal; font-size:12px;">(${maskedContact})</span></span>
                   <span style="color: #888; font-size: 12px;">📅 ${ord.createdAt}</span>
                 </div>
                 <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px;">${itemsHtml}</div></div>
