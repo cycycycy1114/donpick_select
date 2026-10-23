@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. 讀取 C 表（款式明細表），透過 Relation 找到 B 表的主商品名稱，並建立「主商品名稱 + 款式名稱」的圖片字典
+    // 2. 讀取 C 表（款式明細表），透過 Relation 找到 B 表的主商品名稱，並建立圖片字典
     let productDict = {};
     if (productDetailDbId) {
       try {
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
             if (relKey && p[relKey]?.relation && Array.isArray(p[relKey].relation) && p[relKey].relation.length > 0) {
               const relId = p[relKey].relation[0]?.id;
               if (relId && bMapById[relId]) {
-                parentName = bMapById[relId]; // 成功透過 B 表 ID 取得主商品名稱！
+                parentName = bMapById[relId]; 
               }
             }
 
@@ -74,18 +74,24 @@ export default async function handler(req, res) {
 
             // 取得 C 表的款式名稱 (Title)
             let styleName = '標準款式';
-            const titleKey = Object.keys(p).find(k => k[k]?.type === 'title');
+            const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
             if (titleKey && p[titleKey]?.title?.[0]) {
               styleName = p[titleKey].title.map(t => t?.plain_text || '').join('').trim() || '標準款式';
             }
 
-            // 取得 C 表的圖片 (Files)
+            // 🎯 修正：正確透過 p[k]?.type === 'files' 或欄位名稱「款式圖片」取得 C 表圖片
             let imageUrl = '';
-            const imgKey = Object.keys(p).find(k => k[k]?.type === 'files');
-            if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files) && p[imgKey].files.length > 0) {
-              const fileObj = p[imgKey].files[0];
-              imageUrl = fileObj?.file?.url || fileObj?.external?.url || '';
-            }
+            Object.keys(p).forEach(k => {
+              const prop = p[k];
+              if (!prop) return;
+              const lowerK = k.toLowerCase();
+              if (prop.type === 'files' || lowerK.includes('款式圖片') || lowerK.includes('圖片')) {
+                if (prop.files && Array.isArray(prop.files) && prop.files.length > 0) {
+                  const fileObj = prop.files[0];
+                  imageUrl = fileObj?.file?.url || fileObj?.external?.url || imageUrl;
+                }
+              }
+            });
 
             // 建立對應字典
             if (imageUrl) {
