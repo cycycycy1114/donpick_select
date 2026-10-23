@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
       const properties = {
         "買家暱稱": {
-          title: [{ text: { content: nickname || '訪客' } }]
+          title: [{ text: { content: nickname } }]
         },
         "聯絡方式": {
           rich_text: [{ text: { content: `${contactType}: ${contactInfo}` } }]
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
           rich_text: [{ text: { content: productTitle } }]
         },
         "規格": {
-          rich_text: [{ text: { content: specName } }]
+          select: { name: specName } // 根據您的 Notion 設定：規格為 select
         },
         "數量": {
           number: quantity
