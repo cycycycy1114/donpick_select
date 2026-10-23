@@ -1,27 +1,404 @@
-<script>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DonPick 懂挑 | 線上預購與選物網站</title>
+  <link rel="icon" type="image/jpeg" href="./Logo.jpg">
+  <style>
+    :root {
+      --milk-red: #b85b53;       
+      --milk-red-dark: #964741;  
+      --bg-cream: #f9f6f0;       
+      --card-bg: #ffffff;        
+      --cream-light: #f3efe6;    
+      --border-color: #e8e2d5;   
+      --text-main: #4a403a;      
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-cream);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(184, 91, 83, 0.04);
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--milk-red);
+    }
+    
+    .logo-img {
+      width: 46px;
+      height: 46px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: #fff;
+    }
+
+    .header-btns { display: flex; gap: 10px; }
+    .header-btn {
+      background: var(--cream-light);
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: bold;
+      color: var(--milk-red);
+    }
+    .header-btn:hover { background: #ebd5cd; }
+    
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+
+    .announcement-banner {
+      background: #fbf5ee;
+      border: 1px solid #ebd5cd;
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #7d403a;
+    }
+
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 10px 18px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #6e625a;
+    }
+
+    .category-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    .cat-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      color: #6e625a;
+      font-weight: bold;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .cat-btn.active {
+      background: var(--milk-red);
+      color: white;
+      border-color: var(--milk-red);
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .product-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    
+    .product-img-wrapper {
+      position: relative;
+      width: 100%;
+      height: 160px;
+      background: var(--cream-light);
+    }
+    .product-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: zoom-in;
+    }
+    
+    .badges-container {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      z-index: 2;
+    }
+    .badge {
+      background: rgba(184, 91, 83, 0.92);
+      color: white;
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 12px;
+      font-weight: bold;
+    }
+    .badge-ended {
+      background: rgba(120, 120, 120, 0.9);
+    }
+
+    .product-info { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; }
+    .product-title { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+    .product-price { color: var(--milk-red); font-weight: bold; font-size: 15px; margin-top: auto; margin-bottom: 10px; }
+    .product-card-btn {
+      background: var(--milk-red);
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: bold;
+      width: 100%;
+    }
+    .product-card-btn:hover { background: var(--milk-red-dark); }
+    .product-card-btn.ended-btn { background: #888888; }
+    .product-card-btn.ended-btn:hover { background: #666666; }
+
+    .lightbox-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      cursor: zoom-out;
+    }
+    .lightbox-content {
+      max-width: 90%;
+      max-height: 90vh;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .float-cart-bar {
+      position: fixed; bottom: 20px; right: 20px;
+      background: var(--milk-red); color: white;
+      padding: 12px 20px; border-radius: 30px;
+      box-shadow: 0 4px 15px rgba(184, 91, 83, 0.3);
+      cursor: pointer; font-weight: bold; z-index: 99; font-size: 14px;
+    }
+
+    .modal-overlay, .drawer-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(74, 64, 58, 0.4); z-index: 1000; justify-content: center; align-items: center;
+    }
+    .modal-card {
+      background: var(--card-bg); width: 90%; max-width: 420px;
+      border-radius: 12px; padding: 20px; position: relative; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-close { position: absolute; top: 12px; right: 16px; font-size: 20px; cursor: pointer; color: #888; }
+
+    .styles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; max-height: 200px; overflow-y: auto; }
+    .style-card { border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; text-align: center; cursor: pointer; background: var(--cream-light); }
+    .style-card.selected { border-color: var(--milk-red); background: #fbf5ee; }
+    .style-card img { width: 100%; height: 60px; object-fit: cover; border-radius: 4px; cursor: zoom-in; }
+
+    .drawer {
+      display: none; position: fixed; top: 0; right: 0; width: 400px; max-width: 100%; height: 100%;
+      background: var(--card-bg); box-shadow: -4px 0 20px rgba(0,0,0,0.1); z-index: 1001; flex-direction: column;
+    }
+    .drawer-header { padding: 16px; border-bottom: 1px solid var(--border-color); font-weight: bold; background: var(--cream-light); display: flex; justify-content: space-between; }
+    .drawer-body { padding: 16px; flex-grow: 1; overflow-y: auto; }
+    .drawer-footer { padding: 16px; border-top: 1px solid var(--border-color); background: var(--cream-light); }
+    
+    .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color); font-size: 13px; }
+    .remove-btn { color: #d9534f; border: none; background: none; cursor: pointer; font-size: 12px; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; box-sizing: border-box; background: #fff; }
+    
+    .submit-btn { background: var(--milk-red); color: white; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; }
+    .submit-btn:hover { background: var(--milk-red-dark); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-area">
+      <img src="./Logo.jpg" alt="Logo" class="logo-img" id="brandLogo" onerror="this.src='https://via.placeholder.com/100x100/b85b53/ffffff?text=DP'">
+      <span>DonPick 懂挑</span>
+    </div>
+    <div class="header-btns">
+      <button class="header-btn" onclick="window.openQueryDrawer()">🔍 已結單與訂單查詢</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="announcement-banner" id="announcementBanner">
+      <div style="font-weight: bold; margin-bottom: 6px; color: var(--milk-red);">📢 【最新公告事項】</div>
+      <div id="announcementList" style="display: flex; flex-direction: column; gap: 6px;"></div>
+    </div>
+
+    <div class="stats-bar">
+      <div>🔥 歡迎來到 DonPick 選物小站！</div>
+      <div>✨ 嚴選質感代購與好物預購</div>
+    </div>
+
+    <div class="category-bar" id="categoryBar">
+      <button class="cat-btn active" onclick="window.filterCategory('全部', this)">全部商品</button>
+    </div>
+
+    <div class="product-grid" id="productGrid">
+      <div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">⏳ 正在載入商品目錄...</div>
+    </div>
+
+    <div style="max-width: 800px; margin: 40px auto; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; text-align: center; font-size: 15px; line-height: 1.8;">
+      <div style="font-size: 18px; font-weight: bold; color: var(--milk-red); margin-bottom: 8px;">💬 【訂單客服與售後專區】</div>
+      <div style="color: #665c55; margin-bottom: 10px;">有任何匯款、修改資料、合併寄出或商品問題，歡迎隨時聯絡我們：</div>
+      <div style="font-weight: bold;">👉 LINE 客服：<a href="https://lin.ee/9RRJHKL" target="_blank" style="color: #00b900; text-decoration: none;">@122dbekb (點選連結加好友)</a></div>
+      <div style="margin-top: 18px; border-top: 1px dashed var(--border-color); padding-top: 16px;">
+        <button type="button" onclick="window.openWishDrawer()" style="background: linear-gradient(135deg, #e8a598, #d87a70); border: none; padding: 10px 24px; border-radius: 20px; font-weight: bold; color: white; cursor: pointer;">✨ 我要許願想買的商品！</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lightbox-overlay" id="lightboxModal" onclick="window.closeLightbox()">
+    <img class="lightbox-content" id="lightboxImg">
+  </div>
+
+  <div class="float-cart-bar" onclick="window.openCheckoutDrawer()">
+    🛒 購物車 (<span id="floatCartCount">0</span>) | $<span id="floatGrandTotal">0</span>
+  </div>
+
+  <div class="modal-overlay" id="specModal" onclick="window.closeModalOnOutside(event)">
+    <div class="modal-card">
+      <span class="modal-close" onclick="window.closeModal()">×</span>
+      <h3 id="modalProductName" style="margin-top: 0; font-size: 18px; color: var(--milk-red);">商品名稱</h3>
+      <div id="modalProductDesc" style="font-size: 13px; color: #666; margin-bottom: 10px;"></div>
+      <div id="modalProductExtra" style="font-size: 13px; font-weight: bold; color: var(--milk-red-dark); margin-bottom: 12px;"></div>
+      
+      <label style="font-size: 13px; font-weight: bold; display: block; margin-bottom: 4px;">款式規格與價格預覽 (點擊圖片可放大)：</label>
+      <div id="modalStylesContainer" class="styles-grid"></div>
+
+      <div class="form-group" id="modalQtyGroup" style="margin-top: 14px;">
+        <label>購買數量：</label>
+        <input type="number" id="modalQuantity" value="1" min="1" oninput="window.updateModalPrice()">
+      </div>
+
+      <div id="modalPriceSummary" style="font-size: 14px; color: var(--milk-red); margin: 12px 0; font-weight: bold; text-align: right;">
+        單價： $<span id="modalUnitPrice">0</span> | 小計：$ <span id="modalSubtotal">0</span>
+      </div>
+
+      <button type="button" class="product-card-btn" id="modalAddToCartBtn" onclick="window.addModalItemToCart()">➕ 加入購物車</button>
+    </div>
+  </div>
+
+  <div class="drawer" id="checkoutDrawer">
+    <div class="drawer-header">
+      <span>🛒 您的購物車清單</span>
+      <span style="cursor: pointer;" onclick="window.closeCheckoutDrawer()">×</span>
+    </div>
+    <div class="drawer-body">
+      <div style="background: #fbf5ee; border: 1px solid #ebd5cd; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; line-height: 1.6; color: #7d403a;">
+        <strong>📢 下單與寄送注意事項：</strong>
+        <ul style="margin: 4px 0 0 16px; padding: 0;">
+          <li><strong>成單與通知：</strong> 商品採預購制，未成單將另行通知；若順利成單將為您採購並寄出。</li>
+          <li><strong>併單寄送：</strong> 若有多筆訂單欲合併寄出，請務必主動私訊 <a href="https://lin.ee/9RRJHKL" target="_blank" style="color: #00b900; font-weight: bold;">LINE 客服</a> 告知！</li>
+          <li><strong>隱私與付款：</strong> 送出訂單後，請直接<strong>截圖私訊 LINE 官方帳號</strong>核對寄件資料與付款。</li>
+        </ul>
+      </div>
+      <div id="cartContainer"><div style="color: #888; text-align: center; padding: 12px;">購物車尚無商品</div></div>
+      <hr style="border:0; border-top:1px solid var(--border-color); margin: 15px 0;">
+      <div class="form-group"><label>社群暱稱:</label><input type="text" id="nickname" placeholder="例如: 小美"></div>
+      <div class="form-group">
+        <label>聯絡方式:</label>
+        <div style="display: flex; gap: 6px;">
+          <select id="contactType" style="width: 110px;"><option value="LINE ID">LINE ID</option><option value="IG 帳號">IG 帳號</option></select>
+          <input type="text" id="contactInfo" placeholder="請輸入帳號" style="flex-grow:1;">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>取貨方式:</label>
+        <select id="deliverySelect"><option value="7-11 店到店">7-11 店到店</option><option value="面交自取">面交自取</option></select>
+      </div>
+      <div class="form-group"><label>備註:</label><input type="text" id="orderNote" placeholder="特殊需求"></div>
+    </div>
+    <div class="drawer-footer">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold;">
+        <span>總計：<span id="cartCount">0</span> 項</span>
+        <span>總金額：$<span id="grandTotal">0</span></span>
+      </div>
+      <button type="button" class="submit-btn" onclick="window.submitOrder()" id="submitBtn">確認送出全部訂單</button>
+      <div id="msg" style="margin-top: 8px; text-align: center; font-weight: bold; font-size: 13px;"></div>
+    </div>
+  </div>
+
+  <div class="drawer" id="queryDrawer">
+    <div class="drawer-header">
+      <span>🔍 查詢您的歷史訂單與未結清明細</span>
+      <span style="cursor: pointer;" onclick="window.closeQueryDrawer()">×</span>
+    </div>
+    <div class="drawer-body">
+      <div style="font-size: 13px; color: #666; margin-bottom: 12px;">請輸入您的社群暱稱或聯絡帳號查詢：</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <input type="text" id="queryKeyword" placeholder="輸入社群暱稱 (例如: 小美)" style="flex-grow: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+        <button type="button" onclick="window.searchOrders()" style="background: var(--milk-red); color: white; border: none; padding: 0 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">查詢</button>
+      </div>
+      <div id="queryResultContainer"><div style="padding: 20px; text-align: center; color: #888;">尚未輸入查詢條件</div></div>
+    </div>
+  </div>
+
+  <div class="drawer-overlay" id="wishDrawer" onclick="window.closeDrawerOnOutside(event, 'wishDrawer')">
+    <div class="modal-card">
+      <span onclick="window.closeWishDrawer()" class="modal-close">×</span>
+      <h3 style="margin-top: 0; color: var(--milk-red);">✨ 粉絲專屬許願池</h3>
+      <div class="form-group"><label>您的暱稱 / 聯絡：</label><input type="text" id="wishContact" placeholder="小美"></div>
+      <div class="form-group"><label>想許願的商品：</label><input type="text" id="wishProductName" placeholder="商品名稱"></div>
+      <div class="form-group"><label>購買地點 / 國家：</label><input type="text" id="wishLocation" placeholder="東京車站"></div>
+      <div class="form-group"><label>預算範圍：</label><input type="text" id="wishBudget" placeholder="1000"></div>
+      <button type="button" onclick="window.submitWish()" id="wishSubmitBtn" style="width: 100%; background: var(--milk-red); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold;">送出許願單 🎁</button>
+      <div id="wishMsg" style="margin-top: 10px; text-align: center; font-weight: bold;"></div>
+    </div>
+  </div>
+
+  <script>
     let allProducts = [];
     let currentSelectedProduct = null;
     let currentSelectedStyle = null;
     let cart = [];
     let currentCategory = '全部';
 
-    // 確保所有互動函數掛載至全域
     window.filterCategory = function(categoryName, btnEl) {
       currentCategory = categoryName;
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       if (btnEl) btnEl.classList.add('active');
       renderProducts(categoryName);
     };
-
-    async function loadVisitorStats() {
-      try {
-        const res = await fetch('https://api.countapi.xyz/hit/donpick-shop/visits');
-        const data = await res.json();
-        document.getElementById('visitorCount').innerText = data.value.toLocaleString();
-      } catch (e) {
-        document.getElementById('visitorCount').innerText = '1,280+';
-      }
-    }
 
     async function loadCatalog() {
       const grid = document.getElementById('productGrid');
@@ -170,7 +547,7 @@
       grid.innerHTML = '';
       Object.values(productGroups).forEach(item => {
         const imgTag = item.imageUrl 
-          ? `<img src="${item.imageUrl}" onclick="event.stopPropagation(); openLightbox('${item.imageUrl}')">` 
+          ? `<img src="${item.imageUrl}" onclick="event.stopPropagation(); window.openLightbox('${item.imageUrl}')">` 
           : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
         
         let badgesHtml = '';
@@ -213,14 +590,13 @@
               <div class="product-title">${item.productName}</div>
               ${deadlineHtml}
               <div class="product-price">${priceText}</div>
-              <button type="button" class="${btnClass}" onclick="openModal('${item.productName}')">${btnText}</button>
+              <button type="button" class="${btnClass}" onclick="window.openModal('${item.productName}')">${btnText}</button>
             </div>
           </div>
         `;
       });
     }
 
-    // 掛載其他互動函數至全域
     window.openModal = function(productName) {
       currentSelectedProduct = productName;
       const matchedStyles = allProducts.filter(p => p.productName === productName);
@@ -267,7 +643,7 @@
         const card = document.createElement('div');
         card.className = 'style-card';
         const imgTag = style.imageUrl 
-          ? `<img src="${style.imageUrl}" onclick="event.stopPropagation(); openLightbox('${style.imageUrl}')">` 
+          ? `<img src="${style.imageUrl}" onclick="event.stopPropagation(); window.openLightbox('${style.imageUrl}')">` 
           : `<div style="height:60px; background:#eee; font-size:10px; display:flex; align-items:center; justify-content:center;">無圖</div>`;
         
         card.innerHTML = `${imgTag}<div style="font-size:11px; font-weight:bold; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${style.styleName}</div><div style="font-size:10px; color:var(--milk-red);">$${style.price}</div>`;
@@ -518,7 +894,8 @@
     };
 
     window.onload = () => {
-      loadVisitorStats();
       loadCatalog();
     };
   </script>
+</body>
+</html>
