@@ -445,7 +445,7 @@
       }
     }
 
-    // 📂 根據 A 表分類動態產生分頁籤
+    // 📂 根據 A 表分類動態產生分頁籤（支援用數字_排序，並自動過濾掉顯示）
     function buildCategories() {
       const bar = document.getElementById('categoryBar');
       if (!bar) return;
@@ -460,6 +460,7 @@
       });
 
       const uniqueRawCats = [...new Set(rawCats)];
+      // 依照原始名稱（含數字）進行排序
       uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
       const categories = ['全部', ...uniqueRawCats, '已結單'];
@@ -468,7 +469,17 @@
       categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = `cat-btn ${cat === currentCategory ? 'active' : ''}`;
-        btn.innerText = cat;
+        
+        // 🎯 過濾掉開頭的數字與底線（例如 "2_日本代購" 變成 "日本代購"）
+        // 如果是 '全部' 或 '已結單' 則保持原樣
+        let displayName = cat;
+        if (cat !== '全部' && cat !== '已結單') {
+          displayName = cat.replace(/^\d+[__\-]/, ''); 
+        }
+
+        btn.innerText = displayName;
+        
+        // 點擊與篩選時依然帶入原本帶有數字的完整分類名稱 (cat)
         btn.onclick = (e) => filterCategory(cat, e.target);
         bar.appendChild(btn);
       });
