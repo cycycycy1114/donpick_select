@@ -10,15 +10,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       // A表 (主商品表) ID
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   // C表 (款式明細表) ID
-    const annDbId = process.env.ANNOUNCEMENT_DATABASE_ID;                         // 公告表 ID (選填)
+    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   
+    const annDbId = process.env.ANNOUNCEMENT_DATABASE_ID;                         // 公告欄資料庫 ID
 
     if (!productDetailDbId) {
       return res.status(500).json({ success: false, error: '伺服器未設定 PRODUCT_DETAIL_DB_ID 環境變數' });
     }
 
-    // 1. 嘗試查詢 A表 (若有設定) 建立字典
+    // 1. 查詢 A表 (若有設定) 建立字典
     let aMapById = {};
     if (productDbId) {
       try {
@@ -46,7 +46,6 @@ export default async function handler(req, res) {
     cRes.results.forEach(page => {
       const p = page.properties || {};
 
-      // 安全取得款式名稱 (Title 或 Rich text)
       let styleName = '標準款式';
       const styleKey = Object.keys(p).find(k => p[k]?.type === 'title' || k.includes('款式') || k.includes('規格'));
       if (styleKey && p[styleKey]) {
@@ -57,7 +56,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // 取得主商品名稱 (優先透過 A表 Relation，若無則從 C表文字欄位抓)
       let productName = '';
       const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
       if (relKey && p[relKey]?.relation?.length > 0) {
@@ -79,11 +77,9 @@ export default async function handler(req, res) {
 
       if (!productName) productName = '精選商品';
 
-      // 取得價格 (Number)
       const priceKey = Object.keys(p).find(k => p[k]?.type === 'number');
       const price = priceKey && p[priceKey]?.number !== undefined ? p[priceKey].number : 0;
 
-      // 取得圖片 (Files)
       const imgKey = Object.keys(p).find(k => p[k]?.type === 'files');
       let imageUrl = '';
       if (imgKey && p[imgKey]?.files?.length > 0) {
@@ -91,7 +87,6 @@ export default async function handler(req, res) {
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
       }
 
-      // 取得狀態 (支援 Select, Status 或 Formula 計算出的字串)
       let saleType = '預購';
       const typeKey = Object.keys(p).find(k => k.includes('狀態') || k.includes('saleType') || k.includes('type'));
       if (typeKey && p[typeKey]) {
@@ -106,7 +101,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // 取得收單日 (支援 Date 或 Formula)
       let deadline = '';
       const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('截止') || k.includes('deadline'));
       if (dateKey && p[dateKey]) {
@@ -119,7 +113,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // 取得分類 (Multi-select, Select 或 Rich text)
       let categories = ['全部'];
       const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('category'));
       if (catKey && p[catKey]) {
@@ -147,22 +140,28 @@ export default async function handler(req, res) {
       });
     });
 
-    // 3. 查詢公告表 (選填)
+    // 3. 查詢公告欄資料庫 (Announcements)
     let announcements = [];
     if (annDbId) {
       try {
-        const annRes = await notion.databases.query({ database_id: annDbId, page_size: 5 });
+        const annRes = await notion.databases.query({ database_id: annDbId, page_size: 10 });
         announcements = annRes.results.map(page => {
           const p = page.properties || {};
           let text = '';
+          // 自動尋找公告欄位中的文字或標題
           Object.keys(p).forEach(k => {
             const prop = p[k];
-            if (prop?.type === 'title' && prop.title?.[0]) text = prop.title.map(t => t.plain_text || '').join('');
-            if (prop?.type === 'rich_text' && prop.rich_text?.[0]) text = prop.rich_text.map(t => t.plain_text || '').join('');
+            if (prop?.type === 'title' && prop.title?.[0]) {
+              text = prop.title.map(t => t.plain_text || '').join('');
+            } else if (prop?.type === 'rich_text' && prop.rich_text?.[0]) {
+              text = prop.rich_text.map(t => t.plain_text || '').join('');
+            }
           });
           return text;
         }).filter(Boolean);
-      } catch (e) {}
+      } catch (e) {
+        console.log("公告欄查詢失敗:", e.message);
+      }
     }
 
     return res.status(200).json({ success: true, products, announcements });
