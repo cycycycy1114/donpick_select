@@ -18,7 +18,7 @@ export default async function handler(req, res) {
 
     const notion = new Client({ auth: notionToken });
 
-    // 0. 抓取 Notion 公告 (最近 3 筆)
+    // 0. 抓取 Notion 公告
     let announcements = [];
     if (announcementDbId) {
       try {
@@ -107,23 +107,24 @@ export default async function handler(req, res) {
       let imageUrl = '';
       const imgKey = Object.keys(p).find(k => k && (p[k]?.type === 'files' || k.includes('圖')));
       if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files) && p[imgKey].files.length > 0) {
-        const fileObj = p[imgKey].files[0];
+        const fileObj = imgKey.files[0];
         if (fileObj) {
           imageUrl = fileObj.file?.url || fileObj.external?.url || '';
         }
       }
 
-      // 商品分類
-      let category = '全部';
+      // 🎯 修正分類抓取邏輯：確實去抓 Notion 裡的分類、地區或 Tag 欄位（如果找不到則給予合適的預設值，例如 '伴手禮' 或 '其他'，絕對不給 '全部'）
+      let category = '伴手禮';
       const catKey = Object.keys(p).find(k => k && (k.includes('地區') || k.includes('分類') || k.includes('Tag') || k.includes('分區')));
       if (catKey && p[catKey]) {
         const catProp = p[catKey];
-        if (catProp.type === 'select') {
-          category = catProp.select?.name || '全部';
+        if (catProp.type === 'select' && catProp.select?.name) {
+          category = catProp.select.name;
         } else if (catProp.type === 'multi_select' && Array.isArray(catProp.multi_select) && catProp.multi_select.length > 0) {
-          category = catProp.multi_select[0]?.name || '全部';
+          category = catProp.multi_select[0]?.name || '伴手禮';
         } else if (catProp.type === 'rich_text' && Array.isArray(catProp.rich_text)) {
-          category = catProp.rich_text.map(t => t?.plain_text || '').join('') || '全部';
+          const txt = catProp.rich_text.map(t => t?.plain_text || '').join('').trim();
+          if (txt) category = txt;
         }
       }
 
