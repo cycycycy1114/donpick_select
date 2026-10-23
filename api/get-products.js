@@ -77,7 +77,7 @@ export default async function handler(req, res) {
                 if (val === '是' || val === 'yes' || val === 'true') newone = true;
               }
             } 
-            aMapById[page.id] = { productName, description, needDeposit, categories,newone };
+            aMapById[page.id] = { productName, description, needDeposit, categories, newone };
           });
         }
       } catch (e) {
