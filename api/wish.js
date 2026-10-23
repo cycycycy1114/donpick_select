@@ -2,6 +2,37 @@ import { Client } from '@notionhq/client';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 
+// 輔助函式：發送 Telegram 通知
+async function sendTelegramNotification(message) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!botToken || !chatId) {
+    console.warn('Telegram 設定不完整（缺少 TELEGRAM_BOT_TOKEN 或 TELEGRAM_CHAT_ID），已略過通知');
+    return;
+  }
+
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML' // 支援 HTML 排版
+      })
+    });
+
+    const data = await response.json();
+    if (!data.ok) {
+      console.error('Telegram 發送失敗:', data.description);
+    }
+  } catch (error) {
+    console.error('Telegram 網路請求錯誤:', error);
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
@@ -20,31 +51,39 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '請填寫聯絡人與想許願的商品' });
     }
 
-    // 1. 自動讀取 Notion 許願資料庫的真實 Schema 結構
+    // 1. 自動讀取 Notion 許願資料庫的 Schema 結構
     const dbInfo = await notion.databases.retrieve({ database_id: wishDbId });
     const schema = dbInfo.properties || {};
 
-    // 印出 Notion 資料庫目前的真實欄位，方便您在 Vercel Logs 中查看
-    console.log("Notion 許願表真實 Schema:", JSON.stringify(schema, null, 2));
+    // 2. 自動尋找對應欄位名稱的輔助函式
+    const findPropKey = (keywords) => {
+      for (const k of Object.keys(schema)) {
+        const lk = k.trim().toLowerCase();
+        for (const kw of keywords) {
+          if (lk.includes(kw.toLowerCase())) return k;
+        }
+      }
+      return null;
+    };
 
-    // 2. 自動找出 Title 欄位名稱
     const titleKey = Object.keys(schema).find(k => schema[k].type === 'title');
     if (!titleKey) {
       return res.status(500).json({ success: false, error: 'Notion 許願資料庫中找不到 Title (標題) 欄位' });
     }
 
-    // 3. 動態尋找聯絡人欄位（尋找包含「聯絡」、「暱稱」、「contact」、「name」的欄位）
-    const contactKey = Object.keys(schema).find(k => {
-      const lk = k.toLowerCase();
-      return lk.includes('聯絡') || lk.includes('暱稱') || lk.includes('contact') || lk.includes('name');
-    });
+    const contactKey = findPropKey(['聯絡', '暱稱', 'contact', 'name']);
+    const locKey = findPropKey(['地點', '國家', 'location', '地方', '地區']);
+    const budgetKey = findPropKey(['預算', '價格', 'budget', 'price']);
 
     const properties = {};
+
+    // 寫入商品名稱 (Title)
     properties[titleKey] = {
       title: [{ text: { content: product } }]
     };
 
-    if (contactKey) {
+    // 寫入聯絡人
+    if (contactKey && schema[contactKey]) {
       const type = schema[contactKey].type;
       if (type === 'rich_text') {
         properties[contactKey] = { rich_text: [{ text: { content: contact } }] };
@@ -53,17 +92,46 @@ export default async function handler(req, res) {
       }
     }
 
-    // 4. 寫入 Notion
+    // 寫入地點
+    if (location && locKey && schema[locKey]) {
+      const type = schema[locKey].type;
+      if (type === 'rich_text') {
+        properties[locKey] = { rich_text: [{ text: { content: String(location) } }] };
+      } else if (type === 'select') {
+        properties[locKey] = { select: { name: String(location) } };
+      }
+    }
+
+    // 寫入預算
+    if (budget !== undefined && budget !== '' && budgetKey && schema[budgetKey]) {
+      const type = schema[budgetKey].type;
+      if (type === 'number') {
+        properties[budgetKey] = { number: parseFloat(budget) || 0 };
+      } else if (type === 'rich_text') {
+        properties[budgetKey] = { rich_text: [{ text: { content: String(budget) } }] };
+      }
+    }
+
+    // 3. 寫入 Notion 資料庫
     await notion.pages.create({
       parent: { database_id: wishDbId },
       properties: properties
     });
 
-    return res.status(200).json({ success: true, message: '許願成功' });
+    // 4. 🎯 成功寫入後，發送 Telegram 通知
+    const tgMessage = 
+      `✨ <b>收到新的商品許願！</b>\n\n` +
+      `📦 <b>想許願商品：</b> ${product}\n` +
+      `👤 <b>聯絡人：</b> ${contact}\n` +
+      `🌍 <b>採購地點：</b> ${location || '未指定'}\n` +
+      `💰 <b>預算：</b> ${budget ? '$' + budget : '未填寫'}`;
+
+    await sendTelegramNotification(tgMessage);
+
+    return res.status(200).json({ success: true, message: '許願成功並已發送通知' });
 
   } catch (error) {
     console.error("Wish API Error Detail:", error);
-    // 把詳細的錯誤訊息直接回傳給前端，方便您看哪裡出錯
     return res.status(500).json({ success: false, error: error.message || String(error) });
   }
 }
