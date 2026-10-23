@@ -66,7 +66,7 @@ export default async function handler(req, res) {
                 if (val === '是' || val === '需訂金' || val === 'yes' || val === 'true') needDeposit = true;
               }
             }            
-            aMapById[page.id] = { productName, description, deadline, categories,needDeposit };
+            aMapById[page.id] = { productName, description, needDeposit, categories };
           });
         }
       } catch (e) {
