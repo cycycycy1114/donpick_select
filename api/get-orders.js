@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. 建立 C 表（款式明細表字典）
+    // 2. 建立 C 表（款式明細表字典：對應款式名稱與圖片）
     let productDict = {};
     if (productDetailDbId) {
       try {
@@ -97,6 +97,7 @@ export default async function handler(req, res) {
         
         let nickname = '';
         let contactInfo = '';
+        let contactChannel = '';
         let product = '';
         let spec = '標準款式';
         let quantity = 1;
@@ -119,8 +120,10 @@ export default async function handler(req, res) {
             
             if (lowerKey.includes('暱稱') || lowerKey.includes('買家') || lowerKey.includes('name')) {
               nickname = textVal || nickname;
-            } else if (lowerKey.includes('聯絡') || lowerKey.includes('帳號') || lowerKey.includes('id')) {
+            } else if (lowerKey.includes('聯絡帳號') || lowerKey.includes('帳號') || lowerKey.includes('account')) {
               contactInfo = textVal;
+            } else if (lowerKey.includes('聯絡方式') || lowerKey.includes('聯絡') || lowerKey.includes('id')) {
+              if (!contactInfo) contactInfo = textVal;
             } else if (lowerKey.includes('商品') || lowerKey.includes('品項') || lowerKey === 'product') {
               product = textVal;
             } else if (lowerKey.includes('規格') || lowerKey.includes('款式') || lowerKey.includes('spec')) {
@@ -134,6 +137,7 @@ export default async function handler(req, res) {
             if (lowerKey.includes('出貨') || lowerKey.includes('物流')) fulfillmentStatus = selectVal;
             if (lowerKey.includes('付款') || lowerKey.includes('金流')) paymentStatus = selectVal;
             if (lowerKey.includes('規格') || lowerKey.includes('款式') || lowerKey.includes('spec')) spec = selectVal;
+            if (lowerKey.includes('管道') || lowerKey.includes('channel')) contactChannel = selectVal;
           } else if (prop.type === 'status' && prop.status?.name) {
             const statusVal = prop.status.name;
             if (lowerKey.includes('出貨') || lowerKey.includes('物流')) fulfillmentStatus = statusVal;
@@ -149,7 +153,7 @@ export default async function handler(req, res) {
           }
         });
 
-        // 智慧對應圖片
+        // 🎯 智慧從 C 表字典對應圖片（優先用「商品_規格」，其次用「規格」或「商品」）
         const dictKey = `${product}_${spec}`;
         if (!imageUrl && productDict[dictKey]) {
           imageUrl = productDict[dictKey];
@@ -159,14 +163,19 @@ export default async function handler(req, res) {
           imageUrl = productDict[product];
         }
 
+        let fullContact = contactInfo;
+        if (contactChannel && contactInfo && !contactInfo.includes(contactChannel)) {
+          fullContact = `${contactChannel}: ${contactInfo}`;
+        }
+
         const matchKeyword = keyword.toLowerCase();
         const matchName = nickname.toLowerCase().includes(matchKeyword);
-        const matchContact = contactInfo.toLowerCase().includes(matchKeyword);
+        const matchContact = fullContact.toLowerCase().includes(matchKeyword);
 
         if (matchName || matchContact) {
           rawRows.push({
             nickname,
-            contactInfo,
+            contactInfo: fullContact,
             product: product || '未命名商品',
             spec,
             quantity,
