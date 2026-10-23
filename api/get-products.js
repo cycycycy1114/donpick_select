@@ -33,6 +33,20 @@ export default async function handler(req, res) {
             }
             if (!productName) return;
 
+          // 抓取是否需訂金 (needDeposit)
+          let needDeposit = false;
+          const depositKey = Object.keys(p).find(k => k.includes('訂金') || k.includes('押金') || k.includes('deposit'));
+          if (depositKey && p[depositKey]) {
+            const prop = p[depositKey];
+            if (prop.type === 'checkbox') needDeposit = prop.checkbox;
+            else if (prop.type === 'select' && prop.select?.name) {
+              const val = prop.select.name.toLowerCase();
+              if (val === '是' || val === '需訂金' || val === 'yes' || val === 'true') needDeposit = true;
+            }
+          }
+
+          aMapById[page.id] = { productName, description, needDeposit, categories };
+            
             let description = '';
             const descKey = Object.keys(p).find(k => (k.includes('說明') || k.includes('介紹') || k.includes('備註') || k.includes('內容')) && p[k]?.type === 'rich_text');
             if (descKey && p[descKey]?.rich_text && Array.isArray(p[descKey].rich_text) && p[descKey].rich_text.length > 0) {
@@ -112,7 +126,18 @@ export default async function handler(req, res) {
           const fileObj = p[imgKey].files[0];
           imageUrl = fileObj?.file?.url || fileObj?.external?.url || '';
         }
-
+        
+      // 🎯 強制從 C 表抓取收單日期 (deadline)
+      let deadline = '';
+      const cDateKey = Object.keys(p).find(k => p[k]?.type === 'date' || k.includes('收單') || k.includes('截止') || k.includes('日期'));
+      if (cDateKey && p[cDateKey]) {
+        if (p[cDateKey].type === 'date' && p[cDateKey].date?.start) {
+          deadline = p[cDateKey].date.start;
+        } else if (p[cDateKey].type === 'rich_text') {
+          deadline = p[cDateKey].rich_text.map(t => t.plain_text || '').join('');
+        }
+      }
+        
         let saleType = '預購';
         const statusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select' || p[k]?.type === 'formula'));
         if (statusKey && p[statusKey]) {
