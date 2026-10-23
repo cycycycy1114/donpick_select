@@ -66,18 +66,7 @@ export default async function handler(req, res) {
                 if (val === '是' || val === '需訂金' || val === 'yes' || val === 'true') needDeposit = true;
               }
             }
-            // 抓取是否新上架 (newone)
-            let newone = false;
-            const newKey = Object.keys(p).find(k => k.includes('新品') || k.includes('新上架') ;
-            if (newKey && p[newKey]) {
-              const prop = p[newKey];
-              if (prop.type === 'checkbox') newone = prop.checkbox;
-              else if (prop.type === 'select' && prop.select?.name) {
-                const val = prop.select.name.toLowerCase();
-                if (val === '是' || val === 'yes' || val === 'true') newone = true;
-              }
-            } 
-            aMapById[page.id] = { productName, description, needDeposit, categories, newone };
+            aMapById[page.id] = { productName, description, needDeposit, categories };
           });
         }
       } catch (e) {
@@ -175,7 +164,6 @@ export default async function handler(req, res) {
           categories: parentData.categories,
           imageUrl,
           deadline,
-          newone:parentData.newone,
           description: parentData.description,
           needDeposit: parentData.needDeposit
         });
