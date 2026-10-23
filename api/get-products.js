@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ success: false, error: '伺服器未設定 PRODUCT_DETAIL_DB_ID 環境變數' });
     }
 
-    // 1. 查詢 A表 (若有設定) 建立字典
+    // 1. 查詢 A表 (主商品表)，建立 A 表資料字典（抓取分類、說明、收單日）
     let aMapById = {};
     if (productDbId) {
       try {
@@ -30,9 +30,34 @@ export default async function handler(req, res) {
           if (titleKey && p[titleKey]?.title?.length > 0) {
             productName = p[titleKey].title.map(t => t.plain_text || '').join('');
           }
-          if (productName) {
-            aMapById[page.id] = productName;
+          if (!productName) return;
+
+          // 抓取 A 表的商品說明/內容介紹
+          let description = '';
+          const descKey = Object.keys(p).find(k => (k.includes('說明') || k.includes('介紹') || k.includes('備註') || k.includes('內容')) && p[k]?.type === 'rich_text');
+          if (descKey && p[descKey]?.rich_text?.length > 0) {
+            description = p[descKey].rich_text.map(t => t.plain_text || '').join('');
           }
+
+          // 抓取收單日
+          let deadline = '';
+          const dateKey = Object.keys(p).find(k => (k.includes('收單') || k.includes('截止') || k.includes('日期')) && p[k]?.type === 'date');
+          if (dateKey && p[dateKey]?.date?.start) {
+            deadline = p[dateKey].date.start;
+          }
+
+          // 抓取分類
+          let categories = ['全部'];
+          const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('category'));
+          if (catKey && p[catKey]) {
+            if (p[catKey].type === 'multi_select') {
+              categories = p[catKey].multi_select.map(m => m.name).filter(Boolean);
+            } else if (p[catKey].type === 'select') {
+              categories = [p[catKey].select.name];
+            }
+          }
+
+          aMapById[page.id] = { productName, description, deadline, categories };
         });
       } catch (e) {
         console.log("A表查詢略過或失敗:", e.message);
@@ -46,36 +71,30 @@ export default async function handler(req, res) {
     cRes.results.forEach(page => {
       const p = page.properties || {};
 
-      // 🎯 【精準鎖定款式名稱】：C 表的 Title（標題欄位，即「款式名稱」）
       let styleName = '標準款式';
       const styleTitleKey = Object.keys(p).find(k => p[k]?.type === 'title');
       if (styleTitleKey && p[styleTitleKey]?.title?.[0]) {
         styleName = p[styleTitleKey].title.map(t => t.plain_text || '').join('') || '標準款式';
       }
 
-      // 取得主商品名稱 (優先透過 A表 Relation，若無則從 C表文字欄位抓)
-      let productName = '';
+      let parentData = null;
       const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
       if (relKey && p[relKey]?.relation?.length > 0) {
         const parentId = p[relKey].relation[0].id;
-        productName = aMapById[parentId] || '';
+        parentData = aMapById[parentId];
       }
 
-      if (!productName) {
-        const prodNameKey = Object.keys(p).find(k => (k.includes('商品') || k.includes('品名') || k.includes('名稱')) && (p[k]?.type === 'rich_text' || p[k]?.type === 'title'));
-        if (prodNameKey && p[prodNameKey]) {
-          const prop = p[prodNameKey];
-          if (prop.type === 'title' && prop.title) {
-            productName = prop.title.map(t => t.plain_text || '').join('');
-          } else if (prop.type === 'rich_text' && prop.rich_text) {
-            productName = prop.rich_text.map(t => t.plain_text || '').join('');
-          }
-        }
+      // 若無關聯 A 表，給予預設值
+      if (!parentData) {
+        parentData = {
+          productName: '精選商品',
+          description: '',
+          deadline: '',
+          categories: ['全部']
+        };
       }
 
-      if (!productName) productName = '精選商品';
-
-      // 取得價格 (Number)
+      // 取得價格
       let price = 0;
       const priceKeys = Object.keys(p).filter(k => p[k]?.type === 'number');
       if (priceKeys.length > 0) {
@@ -83,15 +102,15 @@ export default async function handler(req, res) {
         price = p[preferredPriceKey]?.number || 0;
       }
 
-      // 取得圖片 (Files)
-      const imgKey = Object.keys(p).find(k => p[k]?.type === 'files');
+      // 取得圖片
       let imageUrl = '';
+      const imgKey = Object.keys(p).find(k => p[k]?.type === 'files');
       if (imgKey && p[imgKey]?.files?.length > 0) {
         const fileObj = p[imgKey].files[0];
         imageUrl = fileObj.file?.url || fileObj.external?.url || '';
       }
 
-      // 取得狀態 (支援 Select, Status 或 Formula)
+      // 取得狀態
       let saleType = '預購';
       const typeKey = Object.keys(p).find(k => k.includes('狀態') || k.includes('saleType') || k.includes('type'));
       if (typeKey && p[typeKey]) {
@@ -106,42 +125,16 @@ export default async function handler(req, res) {
         }
       }
 
-      let deadline = '';
-      const dateKey = Object.keys(p).find(k => k.includes('收單') || k.includes('截止') || k.includes('deadline'));
-      if (dateKey && p[dateKey]) {
-        if (p[dateKey].type === 'date' && p[dateKey].date?.start) {
-          deadline = p[dateKey].date.start;
-        } else if (p[dateKey].type === 'formula') {
-          deadline = p[dateKey].formula?.string || '';
-        } else if (p[dateKey].type === 'rich_text' && p[dateKey].rich_text) {
-          deadline = p[dateKey].rich_text.map(t => t.plain_text || '').join('');
-        }
-      }
-
-      let categories = ['全部'];
-      const catKey = Object.keys(p).find(k => k.includes('分類') || k.includes('地區') || k.includes('category'));
-      if (catKey && p[catKey]) {
-        if (p[catKey].type === 'multi_select' && p[catKey].multi_select) {
-          categories = p[catKey].multi_select.map(m => m.name).filter(Boolean);
-        } else if (p[catKey].type === 'select' && p[catKey].select?.name) {
-          categories = [p[catKey].select.name];
-        } else if (p[catKey].type === 'rich_text' && p[catKey].rich_text) {
-          const text = p[catKey].rich_text.map(t => t.plain_text || '').join('');
-          if (text) categories = [text];
-        }
-      }
-      if (categories.length === 0) categories = ['全部'];
-
       products.push({
-        productName,
+        productName: parentData.productName,
         styleName,
         price,
         saleType,
-        categories,
+        categories: parentData.categories,
         imageUrl,
-        deadline,
-        needDeposit: false,
-        description: ''
+        deadline: parentData.deadline,
+        description: parentData.description, // 傳遞 A 表的商品介紹
+        needDeposit: false
       });
     });
 
@@ -165,7 +158,6 @@ export default async function handler(req, res) {
           if (contentKey && p[contentKey]?.rich_text?.length > 0) {
             contentText = p[contentKey].rich_text.map(t => t.plain_text || '').join('');
           }
-
           if (!contentText) {
             Object.keys(p).forEach(k => {
               const prop = p[k];
@@ -176,12 +168,9 @@ export default async function handler(req, res) {
               }
             });
           }
-
           return contentText;
         }).filter(Boolean);
-      } catch (e) {
-        console.log("公告欄查詢失敗:", e.message);
-      }
+      } catch (e) {}
     }
 
     return res.status(200).json({ success: true, products, announcements });
