@@ -9,9 +9,9 @@
     :root {
       --milk-red: #b85b53;       
       --milk-red-dark: #964741;  
-      --bg-cream: #f9f6f0;       
+      --bg-cream: #fbf9f5;       
       --card-bg: #ffffff;        
-      --cream-light: #f3efe6;    
+      --cream-light: #f4efe6;    
       --border-color: #e8e2d5;   
       --text-main: #4a403a;      
     }
@@ -70,29 +70,33 @@
     
     .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
 
+    /* 📢 質感公告欄 */
     .announcement-banner {
       background: #fbf5ee;
       border: 1px solid #ebd5cd;
-      padding: 14px 18px;
-      border-radius: 10px;
-      margin-bottom: 20px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-bottom: 14px;
       display: none;
       font-size: 14px;
       line-height: 1.6;
       color: #7d403a;
+      box-shadow: 0 2px 6px rgba(184, 91, 83, 0.03);
     }
 
-    .stats-bar {
+    /* ✨ 歡迎詞搬到公告欄下方 */
+    .welcome-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       background: var(--card-bg);
       border: 1px solid var(--border-color);
-      padding: 10px 18px;
-      border-radius: 8px;
+      padding: 12px 20px;
+      border-radius: 10px;
       margin-bottom: 20px;
       font-size: 13px;
       color: #6e625a;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.02);
     }
 
     .category-bar {
@@ -149,6 +153,7 @@
       cursor: zoom-in;
     }
     
+    /* 🏷️ 精緻圓潤的質感標籤 (取代醜醜的綠底) */
     .badges-container {
       position: absolute;
       top: 8px;
@@ -159,27 +164,33 @@
     }
     
     .badge {
-      background: #2b7a4b; 
-      color: white;
+      background: rgba(74, 64, 58, 0.85); 
+      color: #fff;
       font-size: 11px;
       padding: 4px 10px;
-      border-radius: 12px;
-      font-weight: bold;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      border-radius: 16px;
+      font-weight: 500;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
-    .badge-deposit {
-      background: #e67e22 !important; 
-      color: white !important;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-    }
-    .badge-ended {
-      background: #718096 !important; 
-      color: white !important;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-    }
+    .badge-deposit { background: rgba(211, 131, 35, 0.9) !important; }
+    .badge-ended { background: rgba(113, 128, 150, 0.9) !important; }
 
     .product-info { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; }
     .product-title { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+    
+    /* 商品內容介紹簡述 */
+    .product-desc-preview {
+      font-size: 12px;
+      color: #776b63;
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.4;
+    }
+
     .product-price { color: var(--milk-red); font-weight: bold; font-size: 15px; margin-top: auto; margin-bottom: 10px; }
     
     .product-card-btn {
@@ -275,7 +286,8 @@
       <div id="announcementList" style="display: flex; flex-direction: column; gap: 6px;"></div>
     </div>
 
-    <div class="stats-bar">
+    <!-- ✨ 歡迎詞搬到公告欄下方 -->
+    <div class="welcome-bar">
       <div>🔥 歡迎來到 DonPick 選物小站！</div>
       <div>✨ 嚴選質感代購與好物預購</div>
     </div>
@@ -310,7 +322,10 @@
     <div class="modal-card">
       <span class="modal-close" onclick="window.closeModal()">×</span>
       <h3 id="modalProductName" style="margin-top: 0; font-size: 18px; color: var(--milk-red);">商品名稱</h3>
-      <div id="modalProductDesc" style="font-size: 13px; color: #666; margin-bottom: 10px;"></div>
+      
+      <!-- 📝 商品內容介紹 (A 表) -->
+      <div id="modalProductDesc" style="font-size: 13px; color: #555; background: var(--cream-light); padding: 10px; border-radius: 6px; margin-bottom: 12px; line-height: 1.5;"></div>
+      
       <div id="modalProductExtra" style="font-size: 13px; font-weight: bold; color: var(--milk-red-dark); margin-bottom: 12px;"></div>
       
       <label style="font-size: 13px; font-weight: bold; display: block; margin-bottom: 4px;">款式規格與價格預覽 (點擊圖片可放大)：</label>
@@ -417,7 +432,6 @@
         const res = await fetch('/api/get-products');
         const data = await res.json();
         if (data.success) {
-          // 📢 處理公告欄資料渲染
           if (data.announcements && data.announcements.length > 0) {
             const banner = document.getElementById('announcementBanner');
             const list = document.getElementById('announcementList');
@@ -499,17 +513,9 @@
         const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
         const isEndedItem = (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false');
 
-        if (cat === '已結單') {
-          return isEndedItem;
-        }
-
-        if (isEndedItem) {
-          return false;
-        }
-
-        if (cat === '全部') {
-          return true;
-        }
+        if (cat === '已結單') return isEndedItem;
+        if (isEndedItem) return false;
+        if (cat === '全部') return true;
 
         if (!p.categories || !Array.isArray(p.categories)) return false;
         return p.categories.some(c => {
@@ -535,14 +541,14 @@
             prices: [],
             saleType: p.saleType,
             deadline: p.deadline,
+            description: p.description || '',
             needDeposit: p.needDeposit
           };
         }
         if (p.price) productGroups[name].prices.push(p.price);
-        if (!productGroups[name].imageUrl && p.imageUrl) {
-          productGroups[name].imageUrl = p.imageUrl;
-        }
+        if (!productGroups[name].imageUrl && p.imageUrl) productGroups[name].imageUrl = p.imageUrl;
         if (p.deadline) productGroups[name].deadline = p.deadline;
+        if (p.description && !productGroups[name].description) productGroups[name].description = p.description;
         
         const s = String(p.saleType || '').trim();
         const cleanS = s.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
@@ -550,9 +556,6 @@
           productGroups[name].saleType = '已結束';
         } else if (p.saleType && p.saleType !== '預購') {
           productGroups[name].saleType = p.saleType;
-        }
-        if (p.needDeposit) {
-          productGroups[name].needDeposit = true;
         }
       });
 
@@ -571,15 +574,11 @@
         const isEndedCheck = (cleanS === '已結束' || cleanS === '已結單' || cleanS === '斷貨' || cleanS === '售完' || cleanS === 'false');
 
         if (isEndedCheck) {
-          badgesHtml += `<span class="badge badge-ended">已結單/斷貨</span>`;
+          badgesHtml += `<span class="badge badge-ended">已結單</span>`;
           btnText = '🔍 瀏覽歷史紀錄';
           btnClass = 'product-card-btn ended-btn';
         } else {
-          if (item.saleType) {
-            badgesHtml += `<span class="badge">${item.saleType}</span>`;
-          } else {
-            badgesHtml += `<span class="badge">預購中</span>`;
-          }
+          badgesHtml += `<span class="badge">預購中</span>`;
           if (item.needDeposit) badgesHtml += `<span class="badge badge-deposit">需訂金</span>`;
         }
 
@@ -593,8 +592,10 @@
         let deadlineHtml = '';
         if (item.deadline && !isEndedCheck) {
           let cleanDate = item.deadline.replace('T', ' ').substring(0, 16);
-          deadlineHtml = `<div style="font-size: 11px; color: #b85b53; background: #fff5f3; border: 1px solid #ebd5cd; padding: 4px 8px; border-radius: 6px; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 4px;">⏰ 收單：${cleanDate}</div>`;
+          deadlineHtml = `<div style="font-size: 11px; color: #b85b53; background: #fff5f3; border: 1px solid #ebd5cd; padding: 4px 8px; border-radius: 6px; margin-bottom: 8px; font-weight: bold;">⏰ 收單：${cleanDate}</div>`;
         }
+
+        let descHtml = item.description ? `<div class="product-desc-preview">${item.description}</div>` : '';
 
         grid.innerHTML += `
           <div class="product-card">
@@ -604,6 +605,7 @@
             </div>
             <div class="product-info">
               <div class="product-title">${item.productName}</div>
+              ${descHtml}
               ${deadlineHtml}
               <div class="product-price">${priceText}</div>
               <button type="button" class="${btnClass}" onclick="window.openModal('${item.productName}')">${btnText}</button>
@@ -623,12 +625,15 @@
 
       document.getElementById('modalProductName').innerText = productName;
       
-      let descText = sample.description ? `📝 ${sample.description}` : '';
-      if (isEnded) {
-        descText = `🔒 【已結單商品】僅供歷史紀錄瀏覽與價格參考，無法加入購物車。 <br>` + descText;
+      // 📝 顯示 A 表的商品內容介紹
+      const descEl = document.getElementById('modalProductDesc');
+      if (sample.description) {
+        descEl.innerHTML = `<strong>📝 商品介紹：</strong><br>${sample.description.replace(/\n/g, '<br>')}`;
+        descEl.style.display = 'block';
+      } else {
+        descEl.style.display = 'none';
       }
-      document.getElementById('modalProductDesc').innerHTML = descText;
-      
+
       let extraText = '';
       if (sample.deadline) {
         let cleanDate = sample.deadline.replace('T', ' ').substring(0, 16);
@@ -798,14 +803,14 @@
         const data = await res.json();
         if (data.success) {
           msg.style.color = 'green';
-          msg.innerText = '✅ 訂單送出成功！';
+          msg.innerText = '✅ 訂單送出成功！請截圖私訊 LINE 客服核對。';
           cart = [];
           window.renderCart();
           setTimeout(() => {
             window.closeCheckoutDrawer();
             msg.innerText = '';
             btn.disabled = false;
-          }, 1500);
+          }, 3500); // 延長至 3.5 秒
         } else {
           msg.style.color = 'red';
           msg.innerText = '❌ 送出失敗: ' + (data.error || '未知錯誤');
@@ -818,6 +823,7 @@
       }
     };
 
+    // 🔍 查單功能：支援群組化與總結算看板
     window.searchOrders = async function() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
@@ -829,24 +835,62 @@
         const data = await res.json();
         
         if (data.success && data.orders && data.orders.length > 0) {
-          let html = `<div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">找到 ${data.orders.length} 筆相關訂單：</div>`;
+          let grandTotalAll = 0;
+          let totalUnpaidAll = 0;
 
           data.orders.forEach(ord => {
-            html += `
-              <div style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:12px; margin-bottom:12px; font-size:13px; line-height: 1.5;">
-                <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--milk-red); margin-bottom:6px; border-bottom:1px dashed #eee; padding-bottom:6px;">
-                  <span>👤 ${ord.nickname} (${ord.contactInfo})</span>
-                  <span>📅 ${ord.createdAt}</span>
+            grandTotalAll += (ord.grandTotal || 0);
+            totalUnpaidAll += (ord.unpaidTotal || 0);
+          });
+
+          let htmlContent = `
+            <div style="background: linear-gradient(135deg, #fffbe6, #fff1b8); border: 1px solid #ffe58f; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #8c6b00; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+              <div><strong>📊 買家查詢結算：</strong>共找到 ${data.orders.length} 筆訂單</div>
+              <div style="text-align: right;">
+                <span style="margin-right: 12px;">總消費：$${grandTotalAll}</span>
+                <span style="color: #d32f2f; font-weight: bold; font-size: 14px;">🔥 總尚未結清：$${totalUnpaidAll}</span>
+              </div>
+            </div>
+            <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">訂單明細列表：</div>
+          `;
+
+          data.orders.forEach(ord => {
+            let itemsHtml = '';
+            ord.items.forEach(item => {
+              const imgThumbTag = item.imageUrl 
+                ? `<img src="${item.imageUrl}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: #eee; cursor: zoom-in;" onclick="openLightbox('${item.imageUrl}')">`
+                : `<div style="width: 36px; height: 36px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #999;">無圖</div>`;
+
+              itemsHtml += `
+                <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed #eee;">
+                  ${imgThumbTag}
+                  <div style="flex-grow: 1;">
+                    <strong>${item.product}</strong><br>
+                    <span style="color:#666; font-size:12px;">規格：<span style="color: #2eaadc; font-weight: bold;">${item.spec}</span> x ${item.quantity}</span>
+                  </div>
+                  <div style="color: #2eaadc; font-weight: bold;">$${item.price}</div>
                 </div>
-                <div><strong>📦 品項：</strong>${ord.product} / <strong>規格：</strong>${ord.spec} x ${ord.quantity}</div>
-                <div><strong>💰 金額：</strong>$${ord.totalPrice} | <strong>取貨：</strong>${ord.delivery}</div>
-                <div><strong>狀態：</strong><span style="color: #d46b08; font-weight: bold;">[${ord.fulfillmentStatus}]</span> / <span style="color: #52c41a; font-weight: bold;">[${ord.paymentStatus}]</span></div>
+              `;
+            });
+
+            htmlContent += `
+              <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px;">
+                  <span style="font-weight: bold; color: var(--milk-red); font-size: 14px;">👤 ${ord.nickname} (${ord.contactInfo})</span>
+                  <span style="color: #888; font-size: 12px;">📅 ${ord.createdAt}</span>
+                </div>
+                <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px;">${itemsHtml}</div></div>
+                <div style="display: flex; justify-content: space-between; background: #fcfcfc; padding: 8px; border-radius: 6px; margin-bottom: 6px;">
+                  <span><strong>💰 該筆總金額：</strong>$${ord.grandTotal}</span>
+                  <span style="color: #d32f2f; font-weight: bold;">⚠️ 尚未結清：$${ord.unpaidTotal}</span>
+                </div>
+                <div><strong>取貨方式：</strong>${ord.delivery} | <strong>狀態：</strong><span style="color: #d46b08; font-weight: bold;">[${ord.fulfillmentStatus}]</span> / <span style="color: #52c41a; font-weight: bold;">[${ord.paymentStatus}]</span></div>
                 ${ord.note ? `<div style="color: #666; margin-top: 4px;"><strong>📝 備註：</strong>${ord.note}</div>` : ''}
               </div>
             `;
           });
 
-          container.innerHTML = html;
+          container.innerHTML = htmlContent;
         } else {
           container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">查無相關訂單紀錄</div>';
         }
@@ -899,9 +943,7 @@
       }
     };
 
-    window.onload = () => {
-      loadCatalog();
-    };
+    window.onload = () => { loadCatalog(); };
   </script>
 </body>
 </html>
