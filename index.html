@@ -70,7 +70,7 @@
     
     .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
 
-    /* 📢 公告欄樣式 */
+    /* 📢 Notion 公告欄樣式 */
     .announcement-banner {
       background: #fbf5ee;
       border: 1px solid #ebd5cd;
@@ -96,7 +96,7 @@
       color: #6e625a;
     }
 
-    /* 📂 動態分類分頁籤列 */
+    /* 📂 來自 A 表分類的分頁籤列 */
     .category-bar {
       display: flex;
       gap: 8px;
@@ -262,10 +262,10 @@
   </header>
 
   <div class="container">
-    <!-- 📢 公告欄區塊 -->
+    <!-- 📢 Notion 公告欄區塊 -->
     <div class="announcement-banner" id="announcementBanner">
-      <div style="font-weight: bold; margin-bottom: 4px;">📢 最新公告事項：</div>
-      <div id="announcementList"></div>
+      <div style="font-weight: bold; margin-bottom: 6px; color: var(--milk-red);">📢 【最新公告事項】</div>
+      <div id="announcementList" style="display: flex; flex-direction: column; gap: 6px;"></div>
     </div>
 
     <div class="stats-bar">
@@ -366,7 +366,7 @@
     </div>
   </div>
 
-  <!-- 📋 查詢訂單 Drawer (完整修復：顯示縮圖、下單時間、款式、數量、金流與總尚未結清) -->
+  <!-- 📋 查詢訂單 Drawer -->
   <div class="drawer" id="queryDrawer">
     <div class="drawer-header">
       <span>🔍 查詢您的歷史訂單與未結清明細</span>
@@ -419,16 +419,18 @@
         const res = await fetch('/api/get-products');
         const data = await res.json();
         if (data.success) {
-          // 📢 渲染公告 (支援多則公告或單則公告)
+          // 📢 動態渲染 Notion 公告欄 (支援多則公告條列)
           if (data.announcements && data.announcements.length > 0) {
             const banner = document.getElementById('announcementBanner');
             const list = document.getElementById('announcementList');
-            list.innerHTML = data.announcements.map(a => `• ${a}`).join('<br>');
-            banner.style.display = 'block';
-          } else if (data.announcement) {
-            const banner = document.getElementById('announcementBanner');
-            const list = document.getElementById('announcementList');
-            list.innerHTML = `• ${data.announcement}`;
+            list.innerHTML = '';
+            data.announcements.forEach((annText, idx) => {
+              const itemDiv = document.createElement('div');
+              itemDiv.style.paddingLeft = '6px';
+              itemDiv.style.borderLeft = '3px solid var(--milk-red)';
+              itemDiv.innerText = annText;
+              list.appendChild(itemDiv);
+            });
             banner.style.display = 'block';
           }
 
@@ -754,7 +756,7 @@
       }
     }
 
-    // 🎯 完整修復的查單函式：支援同單同筆、品項明細、縮圖、金流與總尚未結清金額
+    // 🎯 完整查單功能：支援同單同筆、品項明細、縮圖、金流與總尚未結清金額
     async function searchOrders() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
