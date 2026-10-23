@@ -127,17 +127,6 @@ export default async function handler(req, res) {
           imageUrl = fileObj?.file?.url || fileObj?.external?.url || '';
         }
         
-      // 🎯 強制從 C 表抓取收單日期 (deadline)
-      let deadline = '';
-      const cDateKey = Object.keys(p).find(k => p[k]?.type === 'date' || k.includes('收單') || k.includes('截止') || k.includes('日期'));
-      if (cDateKey && p[cDateKey]) {
-        if (p[cDateKey].type === 'date' && p[cDateKey].date?.start) {
-          deadline = p[cDateKey].date.start;
-        } else if (p[cDateKey].type === 'rich_text') {
-          deadline = p[cDateKey].rich_text.map(t => t.plain_text || '').join('');
-        }
-      }
-        
         let saleType = '預購';
         const statusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select' || p[k]?.type === 'formula'));
         if (statusKey && p[statusKey]) {
