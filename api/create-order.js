@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const dbId = process.env.DATABASE_ID; // 訂單表 ID
+    const dbId = process.env.DATABASE_ID; // 訂單表的 Database ID
     if (!dbId) {
       return res.status(500).json({ success: false, error: '伺服器未設定 DATABASE_ID 環境變數' });
     }
@@ -52,10 +52,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '訂單資料不完整' });
     }
 
-    // 1. 取得 Notion 資料庫的真實 Schema，確保欄位存在才寫入
-    const dbInfo = await notion.databases.retrieve({ database_id: dbId });
-    const schema = dbInfo.properties || {};
-
     let grandTotal = 0;
     const itemDetailsText = [];
 
@@ -65,58 +61,52 @@ export default async function handler(req, res) {
       const specName = item.spec || '標準款式';
       const quantity = Number(item.quantity) || 1;
       
-      const unitPrice = Number(item.price || item.unitPrice || (item.totalPrice ? item.totalPrice / quantity : 0));
+      // 計算單價與總金額
+      const unitPrice = Number(item.price || item.unitPrice || (item.totalPrice ? Math.round(item.totalPrice / quantity) : 0));
       const totalPrice = Number(item.totalPrice || (unitPrice * quantity));
       grandTotal += totalPrice;
 
       itemDetailsText.push(`• <b>${productTitle}</b> / 規格：${specName} x ${quantity} ($${totalPrice})`);
 
-      const properties = {};
-
-      // 基本必填欄位（對應您 Notion 的真實名稱）
-      if (schema["LINE社群暱稱"]) {
-        properties["LINE社群暱稱"] = { title: [{ text: { content: nickname } }] };
-      }
-      if (schema["聯絡管道"]) {
-        properties["聯絡管道"] = { select: { name: contactType || 'LINE ID' } };
-      }
-      if (schema["聯絡帳號"]) {
-        properties["聯絡帳號"] = { rich_text: [{ text: { content: contactInfo } }] };
-      }
-      if (schema["品項"]) {
-        properties["品項"] = { rich_text: [{ text: { content: productTitle } }] };
-      }
-      if (schema["規格"]) {
-        properties["規格"] = { select: { name: specName } };
-      }
-      if (schema["數量"]) {
-        properties["數量"] = { number: quantity }; // 數字型態數量[cite: 1]
-      }
-      if (schema["總金額"]) {
-        properties["總金額"] = { number: totalPrice }; // 數字型態總金額[cite: 1]
-      }
-      if (schema["取貨方式"]) {
-        properties["取貨方式"] = { select: { name: delivery || '7-11 店到店' } };
-      }
-      if (schema["備註"]) {
-        properties["備註"] = { rich_text: [{ text: { content: note || '' } }] };
-      }
-      if (schema["物流狀態"]) {
-        properties["物流狀態"] = { select: { name: '備貨中' } };
-      }
-
-      // 選擇性欄位：若 Notion 有建才寫入，沒有就不寫（避免報錯）
-      if (schema["單價"]) {
-        properties["單價"] = { number: unitPrice };
-      }
-      if (schema["金流"]) {
-        const payType = schema["金流"].type;
-        if (payType === 'select') {
-          properties["金流"] = { select: { name: '未付款' } };
-        } else if (payType === 'status') {
-          properties["金流"] = { status: { name: '未付款' } };
+      // 🎯 完全釘死您 Notion 資料庫的 11 個真實欄位與對應型態
+      const properties = {
+        "LINE社群暱稱": {
+          title: [{ text: { content: nickname } }]
+        },
+        "聯絡管道": {
+          select: { name: contactType || 'LINE ID' }
+        },
+        "聯絡帳號": {
+          rich_text: [{ text: { content: contactInfo } }]
+        },
+        "品項": {
+          rich_text: [{ text: { content: productTitle } }]
+        },
+        "規格": {
+          select: { name: specName }
+        },
+        "單價": {
+          number: unitPrice
+        },
+        "數量": {
+          number: quantity
+        },
+        "總金額": {
+          number: totalPrice
+        },
+        "取貨方式": {
+          select: { name: delivery || '7-11 店到店' }
+        },
+        "備註": {
+          rich_text: [{ text: { content: note || '' } }]
+        },
+        "物流狀態": {
+          select: { name: '備貨中' }
+        },
+        "金流": {
+          select: { name: '未付款' }
         }
-      }
+      };
 
       await notion.pages.create({
         parent: { database_id: dbId },
