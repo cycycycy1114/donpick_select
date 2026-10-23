@@ -2,6 +2,37 @@ import { Client } from '@notionhq/client';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 
+// 輔助函式：發送 Telegram 通知
+async function sendTelegramNotification(message) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!botToken || !chatId) {
+    console.warn('Telegram 設定不完整，已略過通知');
+    return;
+  }
+
+  try {
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML' // 支援 HTML 語法排版
+      })
+    });
+
+    const data = await response.json();
+    if (!data.ok) {
+      console.error('Telegram 發送失敗:', data.description);
+    }
+  } catch (error) {
+    console.error('Telegram 網路請求錯誤:', error);
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
@@ -10,8 +41,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const dbId = process.env.DATABASE_ID; // 訂單表的 Database ID
-
+    const dbId = process.env.DATABASE_ID; // 訂單表 ID
     if (!dbId) {
       return res.status(500).json({ success: false, error: '伺服器未設定 DATABASE_ID 環境變數' });
     }
@@ -22,143 +52,60 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '訂單資料不完整' });
     }
 
-    // 1. 動態取得 Notion 訂單資料庫的真實欄位結構 (Schema)
-    const dbInfo = await notion.databases.retrieve({ database_id: dbId });
-    const schema = dbInfo.properties || {};
+    let grandTotal = 0;
+    const itemDetailsText = [];
 
-    // 輔助函式：根據關鍵字找出 Notion 裡的真實欄位名稱
-    const getPropName = (keywords) => {
-      for (const key of Object.keys(schema)) {
-        const lowerKey = key.toLowerCase();
-        for (const kw of keywords) {
-          if (lowerKey.includes(kw.toLowerCase())) {
-            return { name: key, type: schema[key].type };
-          }
-        }
-      }
-      return null;
-    };
-
-    // 找出各個欄位的真實名稱與型態
-    const titleProp = Object.keys(schema).find(k => schema[k].type === 'title') || '買家暱稱';
-    const accountProp = getPropName(['聯絡帳號', '帳號', 'account']);
-    const channelProp = getPropName(['聯絡管道', '管道', 'channel']);
-    const productProp = getPropName(['商品名稱', '品項', 'product', '商品']);
-    const specProp = getPropName(['規格款式', '規格', '款式', 'spec']);
-    const qtyProp = getPropName(['數量', 'qty', 'quantity']);
-    const unitPriceProp = getPropName(['單價', 'unitprice']); // 🎯 專門對應「單價」欄位
-    const priceProp = getPropName(['總金額', '總價', '金額', 'price', 'total']);
-    const deliveryProp = getPropName(['取貨方式', '寄送', 'delivery', '取貨']);
-    const noteProp = getPropName(['備註', 'note', '許願']);
-    const imgProp = getPropName(['商品圖片', '圖片', 'image', 'file']);
-    const fulfillProp = getPropName(['出貨狀態', '出貨', '物流', 'fulfillment']);
-    const payProp = getPropName(['付款狀態', '付款', '金流', 'payment']);
-
-    // 逐筆將購物車品項寫入 Notion
+    // 逐筆將購物車品項寫入 Notion 訂單資料庫
     for (const item of items) {
-      const properties = {};
+      const productTitle = item.product || '';
+      const specName = item.spec || '標準款式';
+      const quantity = item.quantity || 1;
+      const totalPrice = item.totalPrice || 0;
+      grandTotal += totalPrice;
 
-      // 1. 買家暱稱 (Title)
-      properties[titleProp] = {
-        title: [{ text: { content: nickname || '訪客' } }]
+      itemDetailsText.push(`• <b>${productTitle}</b> / 規格：${specName} x ${quantity} ($${totalPrice})`);
+
+      const properties = {
+        "買家暱稱": {
+          title: [{ text: { content: nickname || '訪客' } }]
+        },
+        "聯絡方式": {
+          rich_text: [{ text: { content: `${contactType}: ${contactInfo}` } }]
+        },
+        "商品名": {
+          rich_text: [{ text: { content: productTitle } }]
+        },
+        "規格": {
+          rich_text: [{ text: { content: specName } }]
+        },
+        "數量": {
+          number: quantity
+        },
+        "總金額": {
+          number: totalPrice
+        },
+        "取貨方式": {
+          select: { name: delivery || '7-11 店到店' }
+        },
+        "備註": {
+          rich_text: [{ text: { content: note || '' } }]
+        },
+        "出貨狀態": {
+          status: { name: '備貨中' }
+        },
+        "付款狀態": {
+          status: { name: '未付款' }
+        }
       };
 
-      // 2. 聯絡帳號
-      if (accountProp) {
-        if (accountProp.type === 'rich_text') {
-          properties[accountProp.name] = { rich_text: [{ text: { content: contactInfo } }] };
-        } else if (accountProp.type === 'select') {
-          properties[accountProp.name] = { select: { name: contactInfo } };
-        }
-      }
-
-      // 3. 聯絡管道
-      if (channelProp) {
-        if (channelProp.type === 'select') {
-          properties[channelProp.name] = { select: { name: contactType || 'LINE ID' } };
-        } else if (channelProp.type === 'rich_text') {
-          properties[channelProp.name] = { rich_text: [{ text: { content: contactType || 'LINE ID' } }] };
-        }
-      }
-
-      // 4. 商品名稱
-      if (productProp) {
-        const prodVal = item.product || '';
-        if (productProp.type === 'rich_text') {
-          properties[productProp.name] = { rich_text: [{ text: { content: prodVal } }] };
-        } else if (productProp.type === 'title') {
-          properties[productProp.name] = { title: [{ text: { content: prodVal } }] };
-        }
-      }
-
-      // 5. 規格款式
-      if (specProp) {
-        const specVal = item.spec || '標準款式';
-        if (specProp.type === 'rich_text') {
-          properties[specProp.name] = { rich_text: [{ text: { content: specVal } }] };
-        } else if (specProp.type === 'select') {
-          properties[specProp.name] = { select: { name: specVal } };
-        }
-      }
-
-      // 6. 數量
-      const qty = item.quantity || 1;
-      if (qtyProp && qtyProp.type === 'number') {
-        properties[qtyProp.name] = { number: qty };
-      }
-
-      // 7. 🎯 單價 (Unit Price)
-      const unitPrice = item.price || (item.totalPrice ? Math.round(item.totalPrice / qty) : 0);
-      if (unitPriceProp && unitPriceProp.type === 'number') {
-        properties[unitPriceProp.name] = { number: unitPrice };
-      }
-
-      // 8. 總金額
-      if (priceProp && priceProp.type === 'number') {
-        properties[priceProp.name] = { number: item.totalPrice || (unitPrice * qty) };
-      }
-
-      // 9. 取貨方式
-      if (deliveryProp) {
-        const delVal = delivery || '7-11 店到店';
-        if (deliveryProp.type === 'select') {
-          properties[deliveryProp.name] = { select: { name: delVal } };
-        } else if (deliveryProp.type === 'rich_text') {
-          properties[deliveryProp.name] = { rich_text: [{ text: { content: delVal } }] };
-        }
-      }
-
-      // 10. 備註
-      if (noteProp && noteProp.type === 'rich_text') {
-        properties[noteProp.name] = { rich_text: [{ text: { content: note || '' } }] };
-      }
-
-      // 11. 商品圖片
-      if (imgProp && imgProp.type === 'files' && item.imageUrl) {
-        properties[imgProp.name] = {
+      // 如果有圖片網址，一併寫入 Notion 的「款式圖片」欄位
+      if (item.imageUrl) {
+        properties["款式圖片"] = {
           files: [{
             name: "product_image.jpg",
             external: { url: item.imageUrl }
           }]
         };
-      }
-
-      // 12. 出貨狀態
-      if (fulfillProp) {
-        if (fulfillProp.type === 'status') {
-          properties[fulfillProp.name] = { status: { name: '備貨中' } };
-        } else if (fulfillProp.type === 'select') {
-          properties[fulfillProp.name] = { select: { name: '備貨中' } };
-        }
-      }
-
-      // 13. 付款狀態
-      if (payProp) {
-        if (payProp.type === 'status') {
-          properties[payProp.name] = { status: { name: '未付款' } };
-        } else if (payProp.type === 'select') {
-          properties[payProp.name] = { select: { name: '未付款' } };
-        }
       }
 
       await notion.pages.create({
@@ -167,7 +114,19 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({ success: true, message: '訂單建立成功' });
+    // 🎯 訂單全部寫入成功後，發送 Telegram 通知
+    const tgMessage = 
+      `🛒 <b>收到新的客戶訂單！</b>\n\n` +
+      `👤 <b>買家暱稱：</b> ${nickname}\n` +
+      `📞 <b>聯絡方式：</b> ${contactType}: ${contactInfo}\n` +
+      `🚚 <b>取貨方式：</b> ${delivery || '7-11 店到店'}\n` +
+      `💰 <b>訂單總金額：</b> $${grandTotal}\n` +
+      `📝 <b>備註：</b> ${note || '無'}\n\n` +
+      `📦 <b>採購品項明細：</b>\n` + itemDetailsText.join('\n');
+
+    await sendTelegramNotification(tgMessage);
+
+    return res.status(200).json({ success: true, message: '訂單建立成功並已發送通知' });
 
   } catch (error) {
     console.error("Create Order Error:", error);
