@@ -453,7 +453,7 @@
       const rawCats = [];
       allProducts.forEach(p => {
         // 只把未結束的商品分類納入上方頁籤列
-        if (p.saleType !== '已結束' && p.category && p.category.trim() !== '') {
+        if (p.saleType !== '已結單' && p.category && p.category.trim() !== '') {
           rawCats.push(p.category.trim());
         }
       });
