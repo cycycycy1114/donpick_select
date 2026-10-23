@@ -578,7 +578,13 @@
           btnText = '🔍 瀏覽歷史紀錄';
           btnClass = 'product-card-btn ended-btn';
         } else {
+          let badgesHtml = '';
+          if (cleanS && cleanS.includes('倒數')) {
+           // 如果有收單日期，顯示「⏳ 倒數收單」並用醒目的橘紅色底色
+            badgesHtml += `<span class="badge" style="background: #ff4d4f; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px;">⏳ 倒數收單</span>`;
+          } else {
           badgesHtml += `<span class="badge">預購中</span>`;
+          }
           if (item.needDeposit) badgesHtml += `<span class="badge badge-deposit">需訂金</span>`;
         }
 
