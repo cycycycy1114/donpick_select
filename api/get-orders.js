@@ -12,8 +12,8 @@ export default async function handler(req, res) {
   try {
     const keyword = (req.query.keyword || '').trim();
     const dbId = process.env.DATABASE_ID;                      // 訂單表 ID
-    const productDbId = process.env.PRODUCT_DB_ID;              // B表 / 主商品表 ID
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID; // C表 / 款式明細表 ID
+    const productDbId = process.env.PRODUCT_DB_ID;              // 主商品表 (B表) ID
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID; // 款式明細表 (C表) ID
 
     if (!dbId) {
       return res.status(500).json({ success: false, error: "缺少 DATABASE_ID 環境變數" });
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '請輸入查詢的暱稱或聯絡帳號' });
     }
 
-    // 1. 讀取 B 表（主商品表）建立 ID ➔ 名稱字典
+    // 1. 建立 B 表（主商品表）ID ➔ 名稱字典
     let bMapById = {};
     if (productDbId) {
       try {
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. 透過 B ➔ A ➔ C 關聯鏈結，讀取 C 表（款式明細表）建立完整圖片字典
+    // 2. 建立 C 表（款式明細表）的圖片字典：嚴格透過「主商品名稱 + 款式名稱」來對應圖片
     let productDict = {};
     if (productDetailDbId) {
       try {
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
           cRes.results.forEach(page => {
             const p = page?.properties || {};
 
-            // 尋找 C 表指向 B 表的 Relation 欄位
+            // 取得關聯到 B 表的主商品名稱
             let parentName = '';
             const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
             if (relKey && p[relKey]?.relation && Array.isArray(p[relKey].relation) && p[relKey].relation.length > 0) {
@@ -62,7 +62,7 @@ export default async function handler(req, res) {
               }
             }
 
-            // 如果 C 表沒有 Relation，改用欄位文字直接對應
+            // 如果沒有 Relation，嘗試從其他欄位抓主商品名稱
             if (!parentName) {
               const textRelKey = Object.keys(p).find(k => k.includes('商品') || k.includes('主商品') || k.includes('Product'));
               if (textRelKey && p[textRelKey]?.rich_text?.[0]) {
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
 
             // 取得 C 表的款式名稱 (Title)
             let styleName = '標準款式';
-            const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
+            const titleKey = Object.keys(p).find(k => k[k]?.type === 'title');
             if (titleKey && p[titleKey]?.title?.[0]) {
               styleName = p[titleKey].title.map(t => t?.plain_text || '').join('').trim() || '標準款式';
             }
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
               imageUrl = fileObj?.file?.url || fileObj?.external?.url || '';
             }
 
-            // 建立多層級對應字典（支援「主商品_款式」、「主商品」、「款式」）
+            // 建立多層級對應字典
             if (parentName && imageUrl) {
               productDict[`${parentName}_${styleName}`] = imageUrl;
               productDict[`${parentName}_標準款式`] = imageUrl;
@@ -165,23 +165,20 @@ export default async function handler(req, res) {
             if (lowerKey.includes('總金額') || lowerKey.includes('總價') || lowerKey.includes('total') || lowerKey.includes('金額')) {
               totalPrice = prop.number || 0;
             }
-          } else if (prop.type === 'files' && prop.files?.[0]) {
-            const fileObj = prop.files[0];
-            imageUrl = fileObj?.file?.url || fileObj?.external?.url || '';
           }
         });
 
-        // 🎯 執行 B ➔ A ➔ C 字典對應抓圖邏輯
+        // 🎯 核心：直接用「品名 + 規格」去字典裡查圖，不需要訂單表存圖！
         const exactKey = `${product}_${spec}`;
         const parentKey = `${product}_標準款式`;
         
-        if (!imageUrl && productDict[exactKey]) {
+        if (productDict[exactKey]) {
           imageUrl = productDict[exactKey];
-        } else if (!imageUrl && productDict[parentKey]) {
+        } else if (productDict[parentKey]) {
           imageUrl = productDict[parentKey];
-        } else if (!imageUrl && productDict[spec]) {
+        } else if (productDict[spec]) {
           imageUrl = productDict[spec];
-        } else if (!imageUrl && productDict[product]) {
+        } else if (productDict[product]) {
           imageUrl = productDict[product];
         }
 
