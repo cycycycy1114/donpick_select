@@ -452,7 +452,8 @@
 
       const rawCats = [];
       allProducts.forEach(p => {
-        if (p.saleType !== '已結束' && p.categories && Array.isArray(p.categories)) {
+        // 直接讀取 Notion 裡所有的分類（不論是不是已結束，全由您在 Notion 自行控管）
+        if (p.categories && Array.isArray(p.categories)) {
           p.categories.forEach(c => {
             if (c && c.trim() !== '') rawCats.push(c.trim());
           });
@@ -460,26 +461,26 @@
       });
 
       const uniqueRawCats = [...new Set(rawCats)];
-      // 依照原始名稱（含數字）進行排序
+      // 依照原始名稱（含數字）進行排序，讓您能用 2_、3_ 控制順序
       uniqueRawCats.sort((a, b) => a.localeCompare(b, 'zh-Hant', { numeric: true }));
 
-      const categories = ['全部', ...uniqueRawCats, '已結單'];
+      // 固定最前面放「全部」，後面接著您在 Notion 設定的所有分類
+      const categories = ['全部', ...uniqueRawCats];
       
       bar.innerHTML = '';
       categories.forEach(cat => {
         const btn = document.createElement('button');
         btn.className = `cat-btn ${cat === currentCategory ? 'active' : ''}`;
         
-        // 🎯 過濾掉開頭的數字與底線（例如 "2_日本代購" 變成 "日本代購"）
-        // 如果是 '全部' 或 '已結單' 則保持原樣
+        // 🎯 自動過濾掉開頭的數字、底線、減號與空格（例如 "2_日本代購" 變成 "日本代購"）
         let displayName = cat;
-        if (cat !== '全部' && cat !== '已結單') {
-          displayName = cat.replace(/^\d+[__\-]/, ''); 
+        if (cat !== '全部') {
+          displayName = cat.replace(/^[\d\s_\-]+/, ''); 
         }
 
         btn.innerText = displayName;
         
-        // 點擊與篩選時依然帶入原本帶有數字的完整分類名稱 (cat)
+        // 點擊與篩選時帶入原本帶有數字的完整分類名稱 (cat)
         btn.onclick = (e) => filterCategory(cat, e.target);
         bar.appendChild(btn);
       });
@@ -496,16 +497,15 @@
       const grid = document.getElementById('productGrid');
       let filtered = [];
 
-      if (cat === '已結單') {
-        filtered = allProducts.filter(p => p.saleType === '已結束');
-      } else if (cat === '全部') {
-        filtered = allProducts.filter(p => p.saleType !== '已結束');
+      if (cat === '全部') {
+        filtered = allProducts;
       } else {
-        filtered = allProducts.filter(p => p.saleType !== '已結束' && p.categories && p.categories.includes(cat));
+        // 根據您在 Notion 點選的分類來篩選商品
+        filtered = allProducts.filter(p => p.categories && p.categories.includes(cat));
       }
 
       if (filtered.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">${cat === '已結單' ? '目前沒有已結單的歷史商品' : '此分類目前無商品'}</div>`;
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">此分類目前無商品</div>`;
         return;
       }
 
@@ -542,7 +542,7 @@
           badgesHtml += `<span class="badge badge-ended">已結單</span>`;
           btnText = '🔍 瀏覽歷史紀錄';
           btnClass = 'product-card-btn ended-btn';
-        } else if (item.saleType) {
+        } else if (item.saleType && item.saleType !== '預購') {
           badgesHtml += `<span class="badge">${item.saleType}</span>`;
         }
 
