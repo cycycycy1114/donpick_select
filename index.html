@@ -96,7 +96,7 @@
       color: #6e625a;
     }
 
-    /* 📂 分類分頁籤列 */
+    /* 📂 動態分類分頁籤列 */
     .category-bar {
       display: flex;
       gap: 8px;
@@ -231,7 +231,7 @@
     .style-card img { width: 100%; height: 60px; object-fit: cover; border-radius: 4px; cursor: zoom-in; }
 
     .drawer {
-      display: none; position: fixed; top: 0; right: 0; width: 380px; max-width: 100%; height: 100%;
+      display: none; position: fixed; top: 0; right: 0; width: 400px; max-width: 100%; height: 100%;
       background: var(--card-bg); box-shadow: -4px 0 20px rgba(0,0,0,0.1); z-index: 1001; flex-direction: column;
     }
     .drawer-header { padding: 16px; border-bottom: 1px solid var(--border-color); font-weight: bold; background: var(--cream-light); display: flex; justify-content: space-between; }
@@ -257,14 +257,14 @@
       <span>DonPick 懂挑</span>
     </div>
     <div class="header-btns">
-      <button class="header-btn" onclick="openQueryDrawer()">🔍 已結單查詢</button>
+      <button class="header-btn" onclick="openQueryDrawer()">🔍 已結單與訂單查詢</button>
     </div>
   </header>
 
   <div class="container">
     <!-- 📢 公告欄區塊 -->
     <div class="announcement-banner" id="announcementBanner">
-      <div style="font-weight: bold; margin-bottom: 4px;">📢 最新公告：</div>
+      <div style="font-weight: bold; margin-bottom: 4px;">📢 最新公告事項：</div>
       <div id="announcementList"></div>
     </div>
 
@@ -273,7 +273,7 @@
       <div>👀 本站總瀏覽人次：<strong id="visitorCount" style="color: var(--milk-red);">載入中...</strong></div>
     </div>
 
-    <!-- 📂 動態分類分頁籤列 -->
+    <!-- 📂 動態分類分頁籤列 (來自 A 表分類) -->
     <div class="category-bar" id="categoryBar">
       <button class="cat-btn active" onclick="filterCategory('全部', this)">全部商品</button>
     </div>
@@ -366,16 +366,16 @@
     </div>
   </div>
 
-  <!-- 📋 查詢訂單 Drawer (完整修復) -->
+  <!-- 📋 查詢訂單 Drawer (完整修復：顯示縮圖、下單時間、款式、數量、金流與總尚未結清) -->
   <div class="drawer" id="queryDrawer">
     <div class="drawer-header">
-      <span>🔍 查詢您的歷史訂單</span>
+      <span>🔍 查詢您的歷史訂單與未結清明細</span>
       <span style="cursor: pointer;" onclick="closeQueryDrawer()">×</span>
     </div>
     <div class="drawer-body">
-      <div style="font-size: 13px; color: #666; margin-bottom: 12px;">請輸入您的社群暱稱或聯絡方式查詢已成立的訂單紀錄：</div>
+      <div style="font-size: 13px; color: #666; margin-bottom: 12px;">請輸入您的社群暱稱或聯絡帳號查詢：</div>
       <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-        <input type="text" id="queryKeyword" placeholder="輸入社群暱稱" style="flex-grow: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+        <input type="text" id="queryKeyword" placeholder="輸入社群暱稱 (例如: 小美)" style="flex-grow: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
         <button type="button" onclick="searchOrders()" style="background: var(--milk-red); color: white; border: none; padding: 0 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">查詢</button>
       </div>
       <div id="queryResultContainer"><div style="padding: 20px; text-align: center; color: #888;">尚未輸入查詢條件</div></div>
@@ -419,7 +419,7 @@
         const res = await fetch('/api/get-products');
         const data = await res.json();
         if (data.success) {
-          // 📢 渲染公告
+          // 📢 渲染公告 (支援多則公告或單則公告)
           if (data.announcements && data.announcements.length > 0) {
             const banner = document.getElementById('announcementBanner');
             const list = document.getElementById('announcementList');
@@ -443,6 +443,7 @@
       }
     }
 
+    // 📂 根據 A 表分類動態產生分頁籤
     function buildCategories() {
       const bar = document.getElementById('categoryBar');
       if (!bar) return;
@@ -495,6 +496,7 @@
         return;
       }
 
+      // 同品項合併邏輯
       const productGroups = {};
       filtered.forEach(p => {
         const name = p.productName || '精選商品';
@@ -752,30 +754,100 @@
       }
     }
 
+    // 🎯 完整修復的查單函式：支援同單同筆、品項明細、縮圖、金流與總尚未結清金額
     async function searchOrders() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
-      if (!keyword) { alert("請輸入查詢暱稱！"); return; }
-      container.innerHTML = '<div style="text-align: center; color: #888;">⏳ 查詢中...</div>';
+
+      if (!keyword) {
+        alert("請輸入要查詢的暱稱或聯絡帳號！");
+        return;
+      }
+
+      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 13px;">⏳ 正在查詢訂單記錄中...</div>';
 
       try {
         const res = await fetch(`/api/get-orders?keyword=${encodeURIComponent(keyword)}`);
         const data = await res.json();
-        if (!data.success) throw new Error(data.error);
+
+        if (!data.success) {
+          throw new Error(data.error || '查詢失敗');
+        }
+
         const orders = data.orders || [];
+
         if (orders.length === 0) {
-          container.innerHTML = `<div style="text-align: center; color: #d32f2f;">查無符合訂單記錄</div>`;
+          container.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: #d32f2f; background: #fff5f5; border-radius: 8px; font-size: 13px;">
+              查無符合 「${keyword}」 的訂單記錄。<br>若剛下單請稍候，或私訊 LINE 客服確認！
+            </div>
+          `;
           return;
         }
-        let html = '';
+
+        let grandTotalAll = 0;
+        let totalUnpaidAll = 0;
+
         orders.forEach(ord => {
-          html += `<div style="background:white; border:1px solid var(--border-color); padding:10px; border-radius:6px; margin-bottom:8px; font-size:13px;">
-            <b>👤 ${ord.nickname}</b> - $${ord.grandTotal}<br>狀態：[${ord.fulfillmentStatus}] / [${ord.paymentStatus}]
-          </div>`;
+          grandTotalAll += (ord.grandTotal || 0);
+          totalUnpaidAll += (ord.unpaidTotal || 0);
         });
-        container.innerHTML = html;
+
+        let htmlContent = `
+          <div style="background: linear-gradient(135deg, #fffbe6, #fff1b8); border: 1px solid #ffe58f; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #8c6b00; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+            <div><strong>📊 買家查詢結算：</strong>共找到 ${orders.length} 筆訂單</div>
+            <div style="text-align: right;">
+              <span style="margin-right: 12px;">總消費：$${grandTotalAll}</span>
+              <span style="color: #d32f2f; font-weight: bold; font-size: 14px;">🔥 總尚未結清：$${totalUnpaidAll}</span>
+            </div>
+          </div>
+          <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">訂單明細列表：</div>
+        `;
+
+        orders.forEach(ord => {
+          let itemsHtml = '';
+          if (ord.items && Array.isArray(ord.items)) {
+            ord.items.forEach(item => {
+              const imgThumbTag = item.imageUrl 
+                ? `<img src="${item.imageUrl}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: #eee; cursor: zoom-in;" onclick="openLightbox('${item.imageUrl}')">`
+                : `<div style="width: 36px; height: 36px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #999;">無圖</div>`;
+
+              itemsHtml += `
+                <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed #eee;">
+                  ${imgThumbTag}
+                  <div style="flex-grow: 1;">
+                    <strong>${item.product}</strong><br>
+                    <span style="color:#666; font-size:12px;">規格：<span style="color: #2eaadc; font-weight: bold;">${item.spec}</span> x ${item.quantity}</span>
+                  </div>
+                  <div style="color: var(--milk-red); font-weight: bold;">$${item.totalPrice || (item.price * item.quantity)}</div>
+                </div>
+              `;
+            });
+          } else {
+            itemsHtml = `<div>• <strong>${ord.product}</strong> / 規格：${ord.spec} x ${ord.quantity}</div>`;
+          }
+
+          htmlContent += `
+            <div style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">
+                <span style="font-weight: bold; color: var(--milk-red); font-size: 14px;">👤 ${ord.nickname} (${ord.contactInfo})</span>
+                <span style="color: #888; font-size: 12px;">📅 ${ord.createdAt}</span>
+              </div>
+              <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px;">${itemsHtml}</div></div>
+              <div style="display: flex; justify-content: space-between; background: var(--cream-light); padding: 8px; border-radius: 6px; margin-bottom: 6px;">
+                <span><strong>💰 該筆總金額：</strong>$${ord.grandTotal || ord.totalPrice}</span>
+                <span style="color: #d32f2f; font-weight: bold;">⚠️ 尚未結清：$${ord.unpaidTotal !== undefined ? ord.unpaidTotal : (ord.grandTotal || ord.totalPrice)}</span>
+              </div>
+              <div><strong>取貨方式：</strong>${ord.delivery} | <strong>狀態：</strong><span style="color: #d46b08; font-weight: bold;">[${ord.fulfillmentStatus}]</span> / <span style="color: #52c41a; font-weight: bold;">[${ord.paymentStatus}]</span></div>
+              ${ord.note ? `<div style="color: #666; margin-top: 4px;"><strong>📝 備註：</strong>${ord.note}</div>` : ''}
+            </div>
+          `;
+        });
+
+        container.innerHTML = htmlContent;
+
       } catch (err) {
-        container.innerHTML = `<div style="color:red;">❌ 錯誤：${err.message}</div>`;
+        container.innerHTML = `<div style="padding: 20px; text-align: center; color: red; font-size: 13px;">❌ 查詢發生錯誤：${err.message}</div>`;
       }
     }
 
