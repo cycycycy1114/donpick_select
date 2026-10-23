@@ -505,38 +505,36 @@
       const grid = document.getElementById('productGrid');
       let filtered = [];
 
-      // 🎯 核心邏輯：先檢查當前要看的是不是「已結單」頁籤
-      if (cat === '已結單') {
-        // 專門抓取狀態包含已結束、已結單或斷貨的商品
-        filtered = allProducts.filter(p => {
-          const s = String(p.saleType || '').trim();
-          return s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true';
-        });
-      } else {
-        // 其它正常分類（包含「全部」或是各個國家分類）
-        filtered = allProducts.filter(p => {
-          const s = String(p.saleType || '').trim();
-          
-          // 🛑 第一道防線：只要狀態是已結束、已結單、斷貨等，強制全部排除在一般商品之外（不讓它們散落各國分類）
-          if (s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true') {
-            return false;
-          }
+      // 🎯 核心邏輯：先檢查商品本身的狀態，而不是先看點了什麼頁籤
+      filtered = allProducts.filter(p => {
+        const s = String(p.saleType || '').trim();
+        const isEndedItem = (s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true');
 
-          // 如果點擊的是「全部」，排除掉已結束的之後全部保留
-          if (cat === '全部') {
-            return true;
-          }
+        // 1. 如果點擊的是「已結單」頁籤：只抓取狀態為已結束的商品
+        if (cat === '已結單') {
+          return isEndedItem;
+        }
 
-          // 點擊的是特定分類（如日本代購），進行智慧模糊比對
-          if (!p.categories || !Array.isArray(p.categories)) return false;
-          return p.categories.some(c => {
-            if (!c) return false;
-            const trimmedC = String(c).trim();
-            const cleanC = trimmedC.replace(/^[\d\s_\-]+/, '');
-            return trimmedC === cat || cleanC === cat || cat.includes(cleanC);
-          });
+        // 2. 如果點擊的是一般頁籤（「全部」或各個國家分類）：
+        // 🛑 如果這件商品本身已經是已結單/斷貨，直接過濾掉（絕不讓它出現在一般分類或全部裡面）
+        if (isEndedItem) {
+          return false;
+        }
+
+        // 3. 如果點擊的是「全部」：保留所有未結束的正常商品
+        if (cat === '全部') {
+          return true;
+        }
+
+        // 4. 如果點擊的是特定國家分類（如日本代購）：進行智慧模糊比對
+        if (!p.categories || !Array.isArray(p.categories)) return false;
+        return p.categories.some(c => {
+          if (!c) return false;
+          const trimmedC = String(c).trim();
+          const cleanC = trimmedC.replace(/^[\d\s_\-]+/, '');
+          return trimmedC === cat || cleanC === cat || cat.includes(cleanC);
         });
-      }
+      });
 
       if (filtered.length === 0) {
         grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">${cat === '已結單' ? '目前沒有已結單的歷史商品' : '此分類目前無商品'}</div>`;
