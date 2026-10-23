@@ -53,15 +53,19 @@ export default async function handler(req, res) {
             const p = page?.properties || {};
             let isEnded = false;
             
-            const statusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select'));
+            // 🎯 支援 status、select、formula 讀取狀態
+            const statusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select' || p[k]?.type === 'formula'));
             if (statusKey && p[statusKey]) {
               const prop = p[statusKey];
               let statusVal = '';
               if (prop.type === 'status') statusVal = prop.status?.name || '';
               else if (prop.type === 'select') statusVal = prop.select?.name || '';
+              else if (prop.type === 'formula') {
+                statusVal = prop.formula?.string || prop.formula?.boolean?.toString() || prop.formula?.number?.toString() || '';
+              }
               
               const trimmedVal = statusVal.trim();
-              if (trimmedVal === '已結束' || trimmedVal === '已結單' || trimmedVal === '斷貨' || trimmedVal === '售完') {
+              if (trimmedVal === '已結束' || trimmedVal === '已結單' || trimmedVal === '斷貨' || trimmedVal === '售完' || trimmedVal === 'true') {
                 isEnded = true;
               }
             }
@@ -75,7 +79,7 @@ export default async function handler(req, res) {
 
               if (name) {
                 let categories = ['伴手禮'];
-                const catKey = Object.keys(p).find(k => k && (k.includes('分類') || k.includes('地區') || k.includes('Tag') || k.includes('分區')));
+                const catKey = Object.keys(p).find(k => k && (k.includes('分類') || k.includes('地區') || k.includes('Tag') || k.includes('分區') || p[k]?.type === 'multi_select'));
                 if (catKey && p[catKey]) {
                   const prop = p[catKey];
                   if (prop.type === 'multi_select' && Array.isArray(prop.multi_select) && prop.multi_select.length > 0) {
@@ -122,6 +126,24 @@ export default async function handler(req, res) {
     if (cRes && cRes.results) {
       cRes.results.forEach(page => {
         const p = page?.properties || {};
+
+        // 🎯 支援 C 表自身的公式狀態檢查（例如 C 表用公式算出來的狀態/斷貨）
+        let cIsEnded = false;
+        const cStatusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select' || p[k]?.type === 'formula'));
+        if (cStatusKey && p[cStatusKey]) {
+          const prop = p[cStatusKey];
+          let cStatusVal = '';
+          if (prop.type === 'status') cStatusVal = prop.status?.name || '';
+          else if (prop.type === 'select') cStatusVal = prop.select?.name || '';
+          else if (prop.type === 'formula') {
+            cStatusVal = prop.formula?.string || prop.formula?.boolean?.toString() || prop.formula?.number?.toString() || '';
+          }
+          const cTrimmed = cStatusVal.trim();
+          if (cTrimmed === '已結束' || cTrimmed === '已結單' || cTrimmed === '斷貨' || cTrimmed === '售完' || cTrimmed === 'true') {
+            cIsEnded = true;
+          }
+        }
+        if (cIsEnded) return; // 如果 C 表狀態是公式算出來的已結束或斷貨，直接跳過
 
         let parentInfo = null;
         const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
@@ -174,7 +196,7 @@ export default async function handler(req, res) {
         products.push({
           productName: parentInfo.name,
           categories: parentInfo.categories,
-          saleType: parentInfo.saleType,
+          saleType: cIsEnded ? '已結束' : parentInfo.saleType,
           deadline: parentInfo.deadline,
           styleName: styleName,
           price: price,
