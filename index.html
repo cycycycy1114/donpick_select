@@ -9,8 +9,8 @@ export default async function handler(req, res) {
 
   try {
     const notionToken = process.env.NOTION_TOKEN;
-    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   
+    const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       // 主商品表 A表
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   // 款式明細表 C表
     const announcementDbId = process.env.ANNOUNCEMENT_DB_ID;
 
     if (!notionToken || !productDetailDbId) {
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
     const notion = new Client({ auth: notionToken });
 
-    // 0. 公告欄
+    // 0. 抓取公告
     let announcements = [];
     if (announcementDbId) {
       try {
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 1. 查詢 A 表（主商品表）
+    // 1. 查詢 A 表（主商品表）：抓取 名稱、分類、押金
     let validAMap = {};
     if (productDbId) {
       try {
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. 查詢 C 表（款式明細表）
+    // 2. 查詢 C 表（款式明細表）：抓取狀態、收單日、價格、圖片、款式名稱
     const cRes = await notion.databases.query({ database_id: productDetailDbId });
     const products = [];
 
@@ -109,17 +109,13 @@ export default async function handler(req, res) {
             else statusVal = String(prop.formula?.string || prop.formula?.boolean || '');
           }
           
-          // 🔍 燈號與字串印出，讓妳在 Vercel Logs 裡看到真實抓到的值
-          console.log(`[Status Debug] 原始狀態值: "${statusVal}" (欄位: ${statusKey})`);
-
-          // 只要狀態文字裡面包含這些關鍵字，直接判定為已結束！
           const rawLower = String(statusVal).toLowerCase();
           if (
             rawLower.includes('結束') || 
             rawLower.includes('結單') || 
             rawLower.includes('斷貨') || 
             rawLower.includes('售完') || 
-            rawLower.includes('已下架') ||
+            rawLower.includes('已下架') || 
             rawLower === 'false' || 
             rawLower === 'closed' ||
             rawLower === 'ended'
@@ -154,7 +150,7 @@ export default async function handler(req, res) {
         let styleName = '標準款式';
         const styleTitleKey = Object.keys(p).find(k => k && p[k]?.type === 'title');
         if (styleTitleKey && p[styleTitleKey]?.title && Array.isArray(p[styleTitleKey].title) && p[styleTitleKey].title.length > 0) {
-          styleName = styleTitleKey.title.map(t => t?.plain_text || '').join('') || '標準款式';
+          styleName = p[styleTitleKey].title.map(t => t?.plain_text || '').join('') || '標準款式';
         }
 
         let price = 0;
@@ -169,7 +165,7 @@ export default async function handler(req, res) {
         let imageUrl = '';
         const imgKey = Object.keys(p).find(k => k && (p[k]?.type === 'files' || k.includes('圖')));
         if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files) && p[imgKey].files.length > 0) {
-          const fileObj = imgKey.files[0];
+          const fileObj = p[imgKey].files[0];
           if (fileObj) {
             imageUrl = fileObj.file?.url || fileObj.external?.url || '';
           }
