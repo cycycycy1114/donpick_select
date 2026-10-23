@@ -823,7 +823,7 @@
       }
     };
 
-    // 🔍 查單功能：支援群組化與總結算看板
+    // 🔍 查單功能：完美修復排版與個資顯示
     window.searchOrders = async function() {
       const keyword = document.getElementById('queryKeyword').value.trim();
       const container = document.getElementById('queryResultContainer');
@@ -843,12 +843,16 @@
             totalUnpaidAll += (ord.unpaidTotal || 0);
           });
 
+          // 🎯 改善黃色結算看板排版（改為上下區塊，絕不擠壓錯位）
           let htmlContent = `
-            <div style="background: linear-gradient(135deg, #fffbe6, #fff1b8); border: 1px solid #ffe58f; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #8c6b00; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-              <div><strong>📊 買家查詢結算：</strong>共找到 ${data.orders.length} 筆訂單</div>
-              <div style="text-align: right;">
-                <span style="margin-right: 12px;">總消費：$${grandTotalAll}</span>
-                <span style="color: #d32f2f; font-weight: bold; font-size: 14px;">🔥 總尚未結清：$${totalUnpaidAll}</span>
+            <div style="background: linear-gradient(135deg, #fffbe6, #fff1b8); border: 1px solid #ffe58f; padding: 14px 16px; border-radius: 10px; margin-bottom: 14px; font-size: 13px; color: #8c6b00; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+              <div style="font-weight: bold; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                <span>📊 買家查詢結算</span>
+                <span>共找到 <strong>${data.orders.length}</strong> 筆訂單</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-top: 1px dashed #ffd666; padding-top: 8px; margin-top: 6px;">
+                <span>總消費：<strong>$${grandTotalAll}</strong></span>
+                <span style="color: #d32f2f; font-weight: bold;">🔥 總尚未結清：$${totalUnpaidAll}</span>
               </div>
             </div>
             <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #333;">訂單明細列表：</div>
@@ -858,25 +862,25 @@
             let itemsHtml = '';
             ord.items.forEach(item => {
               const imgThumbTag = item.imageUrl 
-                ? `<img src="${item.imageUrl}" style="width: 36px; height: 36px; object-fit: cover; border-radius: 4px; background: #eee; cursor: zoom-in;" onclick="openLightbox('${item.imageUrl}')">`
-                : `<div style="width: 36px; height: 36px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #999;">無圖</div>`;
+                ? `<img src="${item.imageUrl}" style="width: 38px; height: 38px; object-fit: cover; border-radius: 6px; background: #eee; border: 1px solid #ddd; cursor: zoom-in;" onclick="openLightbox('${item.imageUrl}')">`
+                : `<div style="width: 38px; height: 38px; background: #eee; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999; border: 1px solid #ddd;">無圖</div>`;
 
               itemsHtml += `
-                <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px dashed #eee;">
+                <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed #eee;">
                   ${imgThumbTag}
-                  <div style="flex-grow: 1;">
+                  <div style="flex-grow: 1; line-height: 1.4;">
                     <strong>${item.product}</strong><br>
-                    <span style="color:#666; font-size:12px;">規格：<span style="color: #2eaadc; font-weight: bold;">${item.spec}</span> x ${item.quantity}</span>
+                    <span style="color:#666; font-size:12px;">規格：<span style="color: var(--milk-red); font-weight: bold;">${item.spec}</span> x ${item.quantity}</span>
                   </div>
-                  <div style="color: #2eaadc; font-weight: bold;">$${item.price}</div>
+                  <div style="color: var(--milk-red); font-weight: bold; font-size: 14px;">$${item.price}</div>
                 </div>
               `;
             });
 
             htmlContent += `
-              <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px;">
-                  <span style="font-weight: bold; color: var(--milk-red); font-size: 14px;">👤 ${ord.nickname} (${ord.contactInfo})</span>
+              <div style="background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                  <span style="font-weight: bold; color: var(--milk-red); font-size: 14px;">👤 ${ord.nickname} <span style="color:#666; font-weight:normal; font-size:12px;">(${ord.contactInfo})</span></span>
                   <span style="color: #888; font-size: 12px;">📅 ${ord.createdAt}</span>
                 </div>
                 <div style="margin-bottom: 8px;"><strong>📦 採購品項明細：</strong><div style="margin-top: 4px;">${itemsHtml}</div></div>
