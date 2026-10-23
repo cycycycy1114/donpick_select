@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
     const notion = new Client({ auth: notionToken });
 
-    // 0. 抓取 Notion 公告
+    // 0. 抓取 Notion 公告欄
     let announcements = [];
     if (announcementDbId) {
       try {
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 1. 查詢 A 表（主商品表），只抓取：名稱、分類、押金
+    // 1. 查詢 A 表（主商品表），抓取：名稱、分類、押金
     let validAMap = {};
     if (productDbId) {
       try {
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. 查詢 C 表（款式明細表），抓取狀態（公式/select）、收單日、價格、圖片
+    // 2. 查詢 C 表（款式明細表），抓取狀態（公式/select/status）、收單日、價格、圖片
     const cRes = await notion.databases.query({ database_id: productDetailDbId });
     const products = [];
 
@@ -104,27 +104,45 @@ export default async function handler(req, res) {
       cRes.results.forEach(page => {
         const p = page?.properties || {};
 
-        // 🎯 檢查 C 表狀態（支援 formula 公式、status、select）
+        // 🎯 智慧清理符號並解析 C 表狀態（支援 formula 公式、status、select）
         let saleType = '預購';
         let isEnded = false;
         const statusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select' || p[k]?.type === 'formula'));
+        
         if (statusKey && p[statusKey]) {
           const prop = p[statusKey];
           let statusVal = '';
           if (prop.type === 'status') statusVal = prop.status?.name || '';
           else if (prop.type === 'select') statusVal = prop.select?.name || '';
           else if (prop.type === 'formula') {
-            statusVal = prop.formula?.string || prop.formula?.boolean?.toString() || prop.formula?.number?.toString() || '';
+            if (prop.formula?.type === 'string') statusVal = prop.formula.string || '';
+            else if (prop.formula?.type === 'boolean') statusVal = prop.formula.boolean ? 'true' : 'false';
+            else if (prop.formula?.type === 'number') statusVal = String(prop.formula.number ?? '');
+            else statusVal = String(prop.formula?.string || prop.formula?.boolean || '');
           }
           
-          const trimmedVal = statusVal.trim();
-          if (trimmedVal === '已結束' || trimmedVal === '已結單' || trimmedVal === '斷貨' || trimmedVal === '售完' || trimmedVal === 'true') {
+          // 移除前方燈號符號（如 🟢、🔴 等）與多餘空白
+          const cleanStatus = String(statusVal)
+            .replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '')
+            .replace(/[^\w\u4e00-\u9fa5]/g, '')
+            .trim();
+
+          if (
+            cleanStatus === '已結束' || 
+            cleanStatus === '已結單' || 
+            cleanStatus === '斷貨' || 
+            cleanStatus === '售完' || 
+            cleanStatus === 'false' || 
+            cleanStatus === 'closed' ||
+            cleanStatus === 'ended'
+          ) {
             isEnded = true;
             saleType = '已結束';
-          } else if (trimmedVal !== '') {
-            saleType = trimmedVal; // 例如「現貨」、「預購」
+          } else if (cleanStatus !== '') {
+            saleType = statusVal.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').trim() || '預購';
           }
         }
+        if (isEnded) saleType = '已結束';
 
         // 取得主商品資訊（透過 Relation）
         let parentName = '精選預購商品';
@@ -140,14 +158,13 @@ export default async function handler(req, res) {
             needDeposit = validAMap[relId].needDeposit;
           }
         } else {
-          // 若無關聯，試著從 C 表抓取名稱
           const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
           if (titleKey && p[titleKey]?.title && p[titleKey].title.length > 0) {
             parentName = p[titleKey].title.map(t => t?.plain_text || '').join('') || '精選預購商品';
           }
         }
 
-        // 取得 C 表的款式名稱 (Title 屬性)
+        // 取得 C 表的款式名稱
         let styleName = '標準款式';
         const styleTitleKey = Object.keys(p).find(k => p[k]?.type === 'title');
         if (styleTitleKey && p[styleTitleKey]?.title && p[styleTitleKey].title.length > 0) {
@@ -168,7 +185,7 @@ export default async function handler(req, res) {
         let imageUrl = '';
         const imgKey = Object.keys(p).find(k => k && (p[k]?.type === 'files' || k.includes('圖')));
         if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files) && p[imgKey].files.length > 0) {
-          const fileObj = p[imgKey].files[0];
+          const fileObj = imgKey.files[0];
           if (fileObj) {
             imageUrl = fileObj.file?.url || fileObj.external?.url || '';
           }
@@ -184,12 +201,12 @@ export default async function handler(req, res) {
         products.push({
           productName: parentName,
           categories: categories,
-          saleType: saleType, // 來自 C 表狀態/公式（若為已結束/斷貨會自動歸類到已結單）
-          deadline: deadline, // 來自 C 表收單日
-          needDeposit: needDeposit, // 來自 A 表押金
-          styleName: styleName,     // 來自 C 表款式
-          price: price,             // 來自 C 表價格
-          imageUrl: imageUrl        // 來自 C 表圖片
+          saleType: saleType,
+          deadline: deadline,
+          needDeposit: needDeposit,
+          styleName: styleName,
+          price: price,
+          imageUrl: imageUrl
         });
       });
     }
