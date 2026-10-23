@@ -103,7 +103,7 @@ export default async function handler(req, res) {
         "物流狀態": {
           select: { name: '備貨中' }
         },
-        "金流": {
+        "金流狀態": {
           select: { name: '未付款' }
         }
       };
