@@ -52,10 +52,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '訂單資料不完整' });
     }
 
-    // 1. 先動態抓取一次 Notion 訂單表的 Schema 結構，用來判斷「金流」是 Status 還是 Select，以及「單價」是否存在
-    const dbInfo = await notion.databases.retrieve({ database_id: dbId });
-    const schema = dbInfo.properties || {};
-
     let grandTotal = 0;
     const itemDetailsText = [];
 
@@ -63,9 +59,11 @@ export default async function handler(req, res) {
     for (const item of items) {
       const productTitle = item.product || '';
       const specName = item.spec || '標準款式';
-      const quantity = item.quantity || 1;
-      const unitPrice = item.price || (item.totalPrice ? Math.round(item.totalPrice / quantity) : 0); // 單價
-      const totalPrice = item.totalPrice || (unitPrice * quantity);
+      const quantity = Number(item.quantity) || 1;
+      
+      // 計算單價與總金額
+      const unitPrice = Number(item.price || item.unitPrice || (item.totalPrice ? item.totalPrice / quantity : 0));
+      const totalPrice = Number(item.totalPrice || (unitPrice * quantity));
       grandTotal += totalPrice;
 
       itemDetailsText.push(`• <b>${productTitle}</b> / 規格：${specName} x ${quantity} ($${totalPrice})`);
@@ -86,11 +84,14 @@ export default async function handler(req, res) {
         "規格": {
           select: { name: specName }
         },
+        "單價": {
+          number: unitPrice // 數字型態單價
+        },
         "數量": {
-          number: quantity // 寫入數量
+          number: quantity // 數字型態數量[cite: 1]
         },
         "總金額": {
-          number: totalPrice // 寫入總金額[cite: 1]
+          number: totalPrice // 數字型態總金額[cite: 1]
         },
         "取貨方式": {
           select: { name: delivery || '7-11 店到店' }
@@ -100,25 +101,11 @@ export default async function handler(req, res) {
         },
         "物流狀態": {
           select: { name: '備貨中' }
+        },
+        "金流": {
+          select: { name: '未付款' } // 固定以 select 寫入預設值「未付款」
         }
       };
-
-      // 如果 Notion 裡有「單價」欄位，則寫入單價
-      if (schema["單價"]) {
-        properties["單價"] = {
-          number: unitPrice
-        };
-      }
-
-      // 檢查「金流」欄位型態並寫入預設值「未付款」
-      if (schema["金流"]) {
-        const payType = schema["金流"].type;
-        if (payType === 'status') {
-          properties["金流"] = { status: { name: '未付款' } };
-        } else if (payType === 'select') {
-          properties["金流"] = { select: { name: '未付款' } };
-        }
-      }
 
       await notion.pages.create({
         parent: { database_id: dbId },
