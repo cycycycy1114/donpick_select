@@ -500,18 +500,42 @@
       if (btnEl) btnEl.classList.add('active');
       renderProducts(categoryName);
     }
-
-    // 🎯 同步修正篩選邏輯，支援陣列包含比對
+    
     function renderProducts(cat) {
       const grid = document.getElementById('productGrid');
       let filtered = [];
 
+      // 🎯 核心邏輯：先檢查當前要看的是不是「已結單」頁籤
       if (cat === '已結單') {
-        filtered = allProducts.filter(p => p.saleType === '已結束');
-      } else if (cat === '全部') {
-        filtered = allProducts.filter(p => p.saleType !== '已結束');
+        // 專門抓取狀態包含已結束、已結單或斷貨的商品
+        filtered = allProducts.filter(p => {
+          const s = String(p.saleType || '').trim();
+          return s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true';
+        });
       } else {
-        filtered = allProducts.filter(p => p.saleType !== '已結束' && p.categories && p.categories.includes(cat));
+        // 其它正常分類（包含「全部」或是各個國家分類）
+        filtered = allProducts.filter(p => {
+          const s = String(p.saleType || '').trim();
+          
+          // 🛑 第一道防線：只要狀態是已結束、已結單、斷貨等，強制全部排除在一般商品之外（不讓它們散落各國分類）
+          if (s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true') {
+            return false;
+          }
+
+          // 如果點擊的是「全部」，排除掉已結束的之後全部保留
+          if (cat === '全部') {
+            return true;
+          }
+
+          // 點擊的是特定分類（如日本代購），進行智慧模糊比對
+          if (!p.categories || !Array.isArray(p.categories)) return false;
+          return p.categories.some(c => {
+            if (!c) return false;
+            const trimmedC = String(c).trim();
+            const cleanC = trimmedC.replace(/^[\d\s_\-]+/, '');
+            return trimmedC === cat || cleanC === cat || cat.includes(cleanC);
+          });
+        });
       }
 
       if (filtered.length === 0) {
@@ -529,7 +553,8 @@
             imageUrl: p.imageUrl || '',
             prices: [],
             saleType: p.saleType,
-            deadline: p.deadline
+            deadline: p.deadline,
+            needDeposit: p.needDeposit
           };
         }
         if (p.price) productGroups[name].prices.push(p.price);
@@ -537,9 +562,16 @@
           productGroups[name].imageUrl = p.imageUrl;
         }
         if (p.deadline) productGroups[name].deadline = p.deadline;
-        if (p.saleType && p.saleType !== '預購') productGroups[name].saleType = p.saleType;
+        
+        const s = String(p.saleType || '').trim();
+        if (s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true') {
+          productGroups[name].saleType = '已結束';
+        } else if (p.saleType && p.saleType !== '預購') {
+          productGroups[name].saleType = p.saleType;
+        }
       });
 
+      // 渲染畫面
       grid.innerHTML = '';
       Object.values(productGroups).forEach(item => {
         const imgTag = item.imageUrl 
@@ -550,12 +582,14 @@
         let btnText = '選擇規格 / 瀏覽';
         let btnClass = 'product-card-btn';
 
-        if (item.saleType === '已結束') {
+        const s = String(item.saleType || '').trim();
+        if (s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true') {
           badgesHtml += `<span class="badge badge-ended">已結單</span>`;
           btnText = '🔍 瀏覽歷史紀錄';
           btnClass = 'product-card-btn ended-btn';
-        } else if (item.saleType) {
-          badgesHtml += `<span class="badge">${item.saleType}</span>`;
+        } else {
+          if (item.saleType) badgesHtml += `<span class="badge">${item.saleType}</span>`;
+          if (item.needDeposit) badgesHtml += `<span class="badge badge-deposit" style="background:#fa8c16; color:#fff; margin-left:4px;">需訂金</span>`;
         }
 
         let priceText = '價格請點擊內文';
@@ -566,7 +600,8 @@
         }
 
         let deadlineHtml = '';
-        if (item.deadline && item.saleType !== '已結束') {
+        const isEndedCheck = s === '已結束' || s === '已結單' || s === '斷貨' || s === '售完' || s === 'true';
+        if (item.deadline && !isEndedCheck) {
           let cleanDate = item.deadline.replace('T', ' ').substring(0, 16);
           deadlineHtml = `<div style="font-size: 11px; color: #d46b08; margin-bottom: 6px; font-weight: bold;">⏰ 收單：${cleanDate}</div>`;
         }
