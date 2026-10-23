@@ -822,7 +822,16 @@
         btn.disabled = false;
       }
     };
-
+    
+    // 🛡️ 隱私遮罩函式：將聯絡 ID 或帳號進行部分隱藏（例如 ghhadrak -> gh****ak）
+    function maskContact(contact) {
+      if (!contact || contact.length <= 4) return '****';
+      const start = contact.substring(0, 2);
+      const end = contact.substring(contact.length - 2);
+      const stars = '*'.repeat(Math.min(contact.length - 4, 6));
+      return start + stars + end;
+    }
+    
     // 🔍 查單功能：完美修復排版與個資顯示
     window.searchOrders = async function() {
       const keyword = document.getElementById('queryKeyword').value.trim();
@@ -877,6 +886,9 @@
               `;
             });
 
+            // 🛡️ 套用 maskContact 隱私遮罩保護買家 ID
+            const maskedContact = maskContact(ord.contactInfo);
+            
             htmlContent += `
               <div style="background: white; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
                 <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
