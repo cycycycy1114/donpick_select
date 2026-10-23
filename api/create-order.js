@@ -60,26 +60,30 @@ export default async function handler(req, res) {
       const productTitle = item.product || '';
       const specName = item.spec || '標準款式';
       const quantity = item.quantity || 1;
-      const totalPrice = item.totalPrice || 0;
+      const unitPrice = item.price || item.totalPrice || 0; // 單價
+      const totalPrice = unitPrice * quantity;
       grandTotal += totalPrice;
 
       itemDetailsText.push(`• <b>${productTitle}</b> / 規格：${specName} x ${quantity} ($${totalPrice})`);
 
       const properties = {
-        "買家暱稱": {
+        "LINE社群暱稱": {
           title: [{ text: { content: nickname } }]
         },
-        "聯絡方式": {
-          rich_text: [{ text: { content: `${contactType}: ${contactInfo}` } }]
+        "聯絡管道": {
+          select: { name: contactType || 'LINE ID' }
         },
-        "商品名": {
+        "聯絡帳號": {
+          rich_text: [{ text: { content: contactInfo } }]
+        },
+        "品項": {
           rich_text: [{ text: { content: productTitle } }]
         },
         "規格": {
-          select: { name: specName } // 根據您的 Notion 設定：規格為 select
+          select: { name: specName }
         },
-        "數量": {
-          number: quantity
+        "單價": {
+          number: unitPrice
         },
         "總金額": {
           number: totalPrice
@@ -90,15 +94,15 @@ export default async function handler(req, res) {
         "備註": {
           rich_text: [{ text: { content: note || '' } }]
         },
-        "出貨狀態": {
+        "物流狀態": {
           status: { name: '備貨中' }
         },
-        "付款狀態": {
+        "金流": {
           status: { name: '未付款' }
         }
       };
 
-      // 如果有圖片網址，一併寫入 Notion 的「款式圖片」欄位
+      // 如果有圖片，寫入 Notion 的圖片欄位（若您的 Notion 訂單表有建款式圖片欄位）
       if (item.imageUrl) {
         properties["款式圖片"] = {
           files: [{
@@ -117,11 +121,11 @@ export default async function handler(req, res) {
     // 🎯 訂單全部寫入成功後，發送 Telegram 通知
     const tgMessage = 
       `🛒 <b>收到新的客戶訂單！</b>\n\n` +
-      `👤 <b>買家暱稱：</b> ${nickname}\n` +
-      `📞 <b>聯絡方式：</b> ${contactType}: ${contactInfo}\n` +
-      `🚚 <b>取貨方式：</b> ${delivery || '7-11 店到店'}\n` +
-      `💰 <b>訂單總金額：</b> $${grandTotal}\n` +
-      `📝 <b>備註：</b> ${note || '無'}\n\n` +
+      `👤 <b>買家暱稱：</b> ${nickname}[cite: 2]\n` +
+      `📞 <b>聯絡方式：</b> ${contactType}: ${contactInfo}[cite: 1]\n` +
+      `🚚 <b>取貨方式：</b> ${delivery || '7-11 店到店'}[cite: 2]\n` +
+      `💰 <b>訂單總金額：</b> $${grandTotal}[cite: 1]\n` +
+      `📝 <b>備註：</b> ${note || '無'}[cite: 2]\n\n` +
       `📦 <b>採購品項明細：</b>\n` + itemDetailsText.join('\n');
 
     await sendTelegramNotification(tgMessage);
