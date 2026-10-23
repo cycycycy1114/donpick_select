@@ -12,8 +12,8 @@ export default async function handler(req, res) {
   try {
     const keyword = (req.query.keyword || '').trim();
     const dbId = process.env.DATABASE_ID;                      // 訂單表 ID
-    const productDbId = process.env.PRODUCT_DB_ID;              // 主商品表 (B表) ID
-    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID; // 款式明細表 (C表) ID
+    const productDbId = process.env.PRODUCT_DB_ID;              // B表（主商品表）ID
+    const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID; // C表（款式明細表）ID
 
     if (!dbId) {
       return res.status(500).json({ success: false, error: "缺少 DATABASE_ID 環境變數" });
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '請輸入查詢的暱稱或聯絡帳號' });
     }
 
-    // 1. 建立 B 表（主商品表）ID ➔ 名稱字典
+    // 1. 先讀取 B 表（主商品表），建立 ID ➔ 主商品名稱的對照字典 (bMapById)
     let bMapById = {};
     if (productDbId) {
       try {
@@ -34,7 +34,9 @@ export default async function handler(req, res) {
             const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
             if (titleKey && p[titleKey]?.title?.[0]) {
               const name = p[titleKey].title.map(t => t?.plain_text || '').join('').trim();
-              if (name) bMapById[page.id] = name;
+              if (name) {
+                bMapById[page.id] = name;
+              }
             }
           });
         }
@@ -43,7 +45,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. 建立 C 表（款式明細表）的圖片字典：嚴格透過「主商品名稱 + 款式名稱」來對應圖片
+    // 2. 讀取 C 表（款式明細表），透過 Relation 找到 B 表的主商品名稱，並建立「主商品名稱 + 款式名稱」的圖片字典
     let productDict = {};
     if (productDetailDbId) {
       try {
@@ -52,21 +54,21 @@ export default async function handler(req, res) {
           cRes.results.forEach(page => {
             const p = page?.properties || {};
 
-            // 取得關聯到 B 表的主商品名稱
+            // 尋找 C 表中指向 B 表的 Relation 欄位
             let parentName = '';
             const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
             if (relKey && p[relKey]?.relation && Array.isArray(p[relKey].relation) && p[relKey].relation.length > 0) {
               const relId = p[relKey].relation[0]?.id;
-              if (relId) {
-                parentName = bMapById[relId] || '';
+              if (relId && bMapById[relId]) {
+                parentName = bMapById[relId]; // 成功透過 B 表 ID 取得主商品名稱！
               }
             }
 
-            // 如果沒有 Relation，嘗試從其他欄位抓主商品名稱
+            // 如果 Relation 沒抓到，嘗試從文字欄位備用讀取
             if (!parentName) {
-              const textRelKey = Object.keys(p).find(k => k.includes('商品') || k.includes('主商品') || k.includes('Product'));
-              if (textRelKey && p[textRelKey]?.rich_text?.[0]) {
-                parentName = p[textRelKey].rich_text.map(t => t?.plain_text || '').join('').trim();
+              const textKey = Object.keys(p).find(k => k.includes('商品') || k.includes('主商品') || k.includes('Product'));
+              if (textKey && p[textKey]?.rich_text?.[0]) {
+                parentName = p[textKey].rich_text.map(t => t?.plain_text || '').join('').trim();
               }
             }
 
@@ -85,14 +87,17 @@ export default async function handler(req, res) {
               imageUrl = fileObj?.file?.url || fileObj?.external?.url || '';
             }
 
-            // 建立多層級對應字典
-            if (parentName && imageUrl) {
-              productDict[`${parentName}_${styleName}`] = imageUrl;
-              productDict[`${parentName}_標準款式`] = imageUrl;
-              productDict[parentName] = imageUrl;
-            }
-            if (styleName && imageUrl) {
-              productDict[styleName] = imageUrl;
+            // 建立對應字典
+            if (imageUrl) {
+              const cleanParent = (parentName || '').trim();
+              const cleanStyle = (styleName || '').trim();
+
+              if (cleanParent) {
+                productDict[`${cleanParent}_${cleanStyle}`] = imageUrl;
+                productDict[`${cleanParent}_標準款式`] = imageUrl;
+                productDict[cleanParent] = imageUrl;
+              }
+              productDict[cleanStyle] = imageUrl;
             }
           });
         }
@@ -168,19 +173,19 @@ export default async function handler(req, res) {
           }
         });
 
-        // 🎯 核心：直接用「品名 + 規格」去字典裡查圖，不需要訂單表存圖！
-        const exactKey = `${product}_${spec}`;
-        const parentKey = `${product}_標準款式`;
-        
-        if (productDict[exactKey]) {
-          imageUrl = productDict[exactKey];
-        } else if (productDict[parentKey]) {
-          imageUrl = productDict[parentKey];
-        } else if (productDict[spec]) {
-          imageUrl = productDict[spec];
-        } else if (productDict[product]) {
-          imageUrl = productDict[product];
-        }
+        const cleanProduct = (product || '').trim();
+        const cleanSpec = (spec || '').trim();
+
+        // 🎯 透過 B ➔ C 字典對應抓圖
+        const k1 = `${cleanProduct}_${cleanSpec}`;
+        const k2 = `${cleanProduct}_標準款式`;
+        const k3 = cleanSpec;
+        const k4 = cleanProduct;
+
+        if (productDict[k1]) imageUrl = productDict[k1];
+        else if (productDict[k2]) imageUrl = productDict[k2];
+        else if (productDict[k3]) imageUrl = productDict[k3];
+        else if (productDict[k4]) imageUrl = productDict[k4];
 
         let fullContact = contactInfo;
         if (contactChannel && contactInfo && !contactInfo.includes(contactChannel)) {
@@ -195,8 +200,8 @@ export default async function handler(req, res) {
           rawRows.push({
             nickname,
             contactInfo: fullContact,
-            product: product || '未命名商品',
-            spec,
+            product: cleanProduct || '未命名商品',
+            spec: cleanSpec,
             quantity,
             totalPrice,
             delivery,
