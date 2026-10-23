@@ -60,8 +60,7 @@ export default async function handler(req, res) {
       const productTitle = item.product || '';
       const specName = item.spec || '標準款式';
       const quantity = item.quantity || 1;
-      const unitPrice = item.price || item.totalPrice || 0; // 單價
-      const totalPrice = unitPrice * quantity;
+      const totalPrice = item.totalPrice || 0;
       grandTotal += totalPrice;
 
       itemDetailsText.push(`• <b>${productTitle}</b> / 規格：${specName} x ${quantity} ($${totalPrice})`);
@@ -82,9 +81,6 @@ export default async function handler(req, res) {
         "規格": {
           select: { name: specName }
         },
-        "單價": {
-          number: unitPrice
-        },
         "總金額": {
           number: totalPrice
         },
@@ -95,22 +91,9 @@ export default async function handler(req, res) {
           rich_text: [{ text: { content: note || '' } }]
         },
         "物流狀態": {
-          status: { name: '備貨中' }
-        },
-        "金流": {
-          status: { name: '未付款' }
+          select: { name: '備貨中' } // 修正為 select 型態
         }
       };
-
-      // 如果有圖片，寫入 Notion 的圖片欄位（若您的 Notion 訂單表有建款式圖片欄位）
-      if (item.imageUrl) {
-        properties["款式圖片"] = {
-          files: [{
-            name: "product_image.jpg",
-            external: { url: item.imageUrl }
-          }]
-        };
-      }
 
       await notion.pages.create({
         parent: { database_id: dbId },
