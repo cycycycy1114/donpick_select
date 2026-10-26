@@ -918,7 +918,7 @@
 
         badgeContainer.innerHTML = `
           <span style="font-size: 12px; color: #e11d48; background-color: #ffe4e6; padding: 4px 8px; border-radius: 4px; font-weight: normal; display: inline-block; line-height: 1.5;">
-            🏷️ 已套用優惠：${calcResult.summary}
+            🏷️ 已套用優惠：${subtotal.summary}
             ${upgradeText}
           </span>
         `;
@@ -1053,13 +1053,7 @@ window.renderCart = function() {
       const msg = document.getElementById('msg');
       // 1. 整理購物車商品與對應的優惠摘要
       const orderItems = cart.map(item => {    
-        let promoSummary = '無優惠';
-        if (item.promoRules && item.promoRules.length > 0) {
-          // 依優先級與門檻排序，找出當次套用的主規則
-          const sortedRules = [...item.promoRules].sort((a, b) => (b.priority || 0) - (a.priority || 0));
-          const bestRule = sortedRules[0];
-          promoSummary = `${bestRule.type} (滿${step.threshold}件,$${step.value})`;
-        }
+        let promoSummary = item.promoRulesSummary || '無優惠';
 
         return {
           product: item.product,
