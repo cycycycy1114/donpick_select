@@ -177,13 +177,17 @@ export default async function handler(req, res) {
           price = p[preferredPriceKey]?.number || 0;
         }
 
-
-        // 假設你在解析商品資料時，抓取 Files 欄位：
+        // 🎯 穩健抓取 C 表的所有圖片網址陣列
         let imageUrls = [];
-        const imgKey = Object.keys(p).find(k => p[k]?.type === 'files');
-        if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files)) {
-          imageUrls = p[imgKey].files.map(f => f?.file?.url || f?.external?.url || '').filter(Boolean);
-        }
+        Object.keys(p).forEach(k => {
+          const prop = p[k];
+          if (prop && prop.type === 'files' && Array.isArray(prop.files)) {
+            const urls = prop.files.map(f => f?.file?.url || f?.external?.url || '').filter(Boolean);
+            if (urls.length > 0) {
+              imageUrls = imageUrls.concat(urls);
+            }
+          }
+        });
 
         const imageUrl = imageUrls.length > 0 ? imageUrls[0] : ''; // 第一張圖當預設封面
         
@@ -229,6 +233,7 @@ export default async function handler(req, res) {
           saleType,
           categories: parentData.categories,
           imageUrl,
+          imageUrls,
           deadline,
           description: parentData.description,
           needDeposit: parentData.needDeposit,
