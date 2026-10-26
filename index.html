@@ -877,6 +877,7 @@
 
     window.updateModalPrice = function() {
       const qty = parseInt(document.getElementById('modalQuantity').value) || 1;
+      const badgeContainer = document.getElementById('modalPromoBadge');
       if (currentSelectedStyle) {
         const basePrice = currentSelectedStyle.price || 0;
         // 取得該款式在 Notion 中對應的優惠規則陣列
@@ -887,7 +888,7 @@
         const subtotal = calculateItemTotalWithBestCombination(basePrice, qty, rules);
         
         document.getElementById('modalUnitPrice').innerText = basePrice; 
-        document.getElementById('modalSubtotal').innerText = subtotal;
+        document.getElementById('modalSubtotal').innerText = subtotal.totalPrice;
         
         // 2. 🎯 動態產生優惠標籤內容
         if (rules.length > 0) {
