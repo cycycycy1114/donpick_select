@@ -990,6 +990,7 @@
           quantity: qty,
           totalPrice: currentSelectedStyle.price * qty,
           imageUrl: currentSelectedStyle.imageUrl || '',
+          saleType: sample ? sample.saleType : '', // 👈 確保這裡有抓到該商品的 saleType 存入購物車！
           promoRules: rules // 綁定優惠規則以便後續參照
         });
       }
