@@ -668,15 +668,15 @@
 
     // 📦 支援 Notion 優先級、多級距、特價/折價的萬用優惠計算函式
     function calculateItemTotalWithBestCombination(basePrice, qty, promoRules) {
+      let totalPrice = 0;
+      let remainingQty = qty;
+
       if (!promoRules || promoRules.length === 0) {
-        return basePrice * qty; // 如果沒有啟用或沒有設定規則，直接算原價
+        return {totalPrice: basePrice * qty} // 如果沒有啟用或沒有設定規則，直接算原價
       }
-    
+
       // 1. 先把所有規則依照門檻從大到小排序 (例如: [6件1500, 3件800])
       promoRules.sort((a, b) => b.threshold - a.threshold);
-
-      let remainingQty = qty;
-      let totalPrice = 0;
 
       // 2. 階段一：優先用大級距盡量扣除
       // (例如 12 件先用 6 件扣，變成 2 組 6 件)
@@ -939,7 +939,7 @@
       if (existing) {
         existing.quantity += qty;
         // 重新以總數量計算優惠價格，避免累加錯誤
-        existing.totalPrice = calculateItemTotalWithBestCombination(basePrice, existing.quantity, rules);
+        existing.totalPrice = calculateItemTotalWithBestCombination(basePrice, existing.quantity, rules).totalPrice;
       } else {
         cart.push({
           product: currentSelectedProduct,
