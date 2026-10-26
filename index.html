@@ -695,7 +695,7 @@
     }
 
     // 🌟 終極版：自動計算最低價，並同時追蹤組合路徑以產生正確的優惠字眼
-    function findCheapestPriceWithSummary(qty, basePrice, rules) {
+    function findCheapestPrice(qty, basePrice, rules) {
       const dp = new Array(qty + 1).fill(Infinity);
       const path = new Array(qty + 1).fill(null); // 追蹤每個數量最優解是怎麼湊出來的
       dp[0] = 0;
