@@ -742,7 +742,7 @@
           ruleCounts['原價'] = (ruleCounts['原價'] || 0) + 1;
           currentQty -= 1;
         } else {
-          const key = `${step.type} (門檻:${step.threshold}, 數值:${step.value})`;
+          const key = `${step.type} (滿${step.threshold}件,$${step.value})`;
           ruleCounts[key] = (ruleCounts[key] || 0) + 1;
           currentQty -= step.threshold;
         }
@@ -890,30 +890,51 @@
         document.getElementById('modalUnitPrice').innerText = basePrice; 
         document.getElementById('modalSubtotal').innerText = subtotal.totalPrice;
         
-        // 2. 🎯 動態產生優惠標籤內容
-        if (rules.length > 0) {
-          const sortedRules = [...rules].sort((a, b) => (b.priority || 0) - (a.priority || 0));
-          const bestRule = sortedRules[0];
+// 2. 🎯 動態產生優惠標籤內容（完美支援多種條件與多級距）
+    if (rules && rules.length > 0) {
+      // 依照門檻由小到大排序，方便判斷階級
+      const sortedRules = [...rules].sort((a, b) => (a.threshold || 0) - (b.threshold || 0));
+      
+      // 找出當前數量已經達到（或超過）的最高一條規則
+      let matchedRule = null;
+      let nextRule = null;
 
-          if (qty >= bestRule.threshold) {
-            // 已達到門檻
-            badgeContainer.innerHTML = `
-              <span style="font-size: 12px; color: #e11d48; background-color: #ffe4e6; padding: 3px 8px; border-radius: 4px; font-weight: normal; display: inline-block;">
-                🏷️ 已套用優惠：${calcResult.summary}
-              </span>
-            `;
-          } else {
-            // 還差幾件達門檻
-            const diff = bestRule.threshold - qty;
-            badgeContainer.innerHTML = `
-              <span style="font-size: 12px; color: #d97706; background-color: #fef3c7; padding: 3px 8px; border-radius: 4px; font-weight: normal; display: inline-block;">
-                💡 再買 ${diff} 件即可享 ${bestRule.type}（滿 ${bestRule.threshold} 件）！
-              </span>
-            `;
-          }
+      for (let i = 0; i < sortedRules.length; i++) {
+        if (qty >= sortedRules[i].threshold) {
+          matchedRule = sortedRules[i]; // 已經達到的最高門檻
         } else {
-          badgeContainer.innerHTML = ''; // 無優惠時清空
+          nextRule = sortedRules[i];    // 還差一點點就能夠到的下一個升級門檻
+          break;
         }
+      }
+
+      if (matchedRule) {
+        // 🌟 狀況 A：已經達到至少一個門檻（已享優惠）
+        let upgradeText = '';
+        if (nextRule) {
+          const diffToNext = nextRule.threshold - qty;
+          upgradeText = `<br><span style="font-size: 11px; color: #0284c7;">🚀 再買 ${diffToNext} 件可升級至「${nextRule.type}（滿 ${nextRule.threshold} 件）」！</span>`;
+        }
+
+        badgeContainer.innerHTML = `
+          <span style="font-size: 12px; color: #e11d48; background-color: #ffe4e6; padding: 4px 8px; border-radius: 4px; font-weight: normal; display: inline-block; line-height: 1.5;">
+            🏷️ 已套用優惠：${calcResult.summary}
+            ${upgradeText}
+          </span>
+        `;
+      } else {
+        // 💡 狀況 B：連最低門檻都還沒到（提示距離最近的門檻）
+        const firstRule = sortedRules[0];
+        const diff = firstRule.threshold - qty;
+        badgeContainer.innerHTML = `
+          <span style="font-size: 12px; color: #d97706; background-color: #fef3c7; padding: 4px 8px; border-radius: 4px; font-weight: normal; display: inline-block;">
+            💡 再買 ${diff} 件即可享 ${firstRule.type}（滿 ${firstRule.threshold} 件）！
+          </span>
+        `;
+      }
+    } else {
+      if (badgeContainer) badgeContainer.innerHTML = ''; // 沒有設定優惠規則就保持空白
+    }
       } else { 
         document.getElementById('modalUnitPrice').innerText = '0'; 
         document.getElementById('modalSubtotal').innerText = '0'; 
@@ -1037,7 +1058,7 @@ window.renderCart = function() {
           // 依優先級與門檻排序，找出當次套用的主規則
           const sortedRules = [...item.promoRules].sort((a, b) => (b.priority || 0) - (a.priority || 0));
           const bestRule = sortedRules[0];
-          promoSummary = `${bestRule.type} (門檻:${bestRule.threshold}, 數值:${bestRule.value})`;
+          promoSummary = `${bestRule.type} (滿${step.threshold}件,$${step.value})`;
         }
 
         return {
