@@ -58,8 +58,6 @@ export default async function handler(req, res) {
           promoRulesMap[styleId].push({ threshold, type, value, priority });
         });
       });
-      // 🎯【除錯小眼睛】把抓到的對應字典印在 Vercel 終端機或 Server 記錄中
-        console.log("🔍 成功載入的 promoRulesMap 字典：", JSON.stringify(promoRulesMap, null, 2));
     } catch (promoErr) {
       console.warn("Promo_Rules 查詢失敗或未設定，將略過優惠：", promoErr.message);
     }
