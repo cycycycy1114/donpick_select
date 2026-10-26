@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
         // 2. 抓取關聯的 C 表款式 ID (支援多個關聯)
         let targetStyleIds = [];
-        const relKey = Object.keys(p).find(k => k[k].type === 'relation');
+        const relKey = Object.keys(p).find(k => p[k].type === 'relation');
         if (relKey && p[relKey].relation) {
           targetStyleIds = p[relKey].relation.map(r => r.id);
         }
@@ -133,6 +133,7 @@ export default async function handler(req, res) {
     }
 
     // 2. 查詢 C 表 (款式明細表)
+    const cPageId = page.id;
     const cRes = await notion.databases.query({ database_id: productDetailDbId, page_size: 100 });
     const products = [];
 
