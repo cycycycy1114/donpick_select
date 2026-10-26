@@ -60,6 +60,7 @@ export default async function handler(req, res) {
       const productTitle = item.product || '';
       const specName = item.spec || '圖片款';
       const quantity = Number(item.quantity) || 1;
+      const promoSum = item.product.promoSummary || '無優惠';
       
       // 計算單價與總金額
       const unitPrice = Number(item.price || item.unitPrice || (item.totalPrice ? Math.round(item.totalPrice / quantity) : 0));
@@ -70,8 +71,8 @@ export default async function handler(req, res) {
       let line = `• <b>${productTitle}</b> / 規格：${specName} x ${quantity} ($${totalPrice})`;
 
       // 3. 🎯 如果有優惠摘要，則額外附帶顯示在下方
-      if (item.promoRulesSummary && item.promoRulesSummary !== '無優惠') {
-       line += `<br>&nbsp;&nbsp;└ 🏷️ 優惠：${item.promoRulesSummary}`;
+      if (promoSum && promoSum !== '無優惠') {
+       line += `<br>&nbsp;&nbsp;└ 🏷️ 優惠：${promoSum}`;
       }
 
       itemDetailsText.push(line);
@@ -103,7 +104,7 @@ export default async function handler(req, res) {
           number: totalPrice
         },
         "優惠活動": {
-          rich_text: [{ text: { content: promoSummary } }] // 👈 新增：寫入優惠條件摘要
+          rich_text: [{ text: { content: promoSum } }] // 👈 新增：寫入優惠條件摘要
         },
         "取貨方式": {
           select: { name: delivery || '7-11 店到店' }
