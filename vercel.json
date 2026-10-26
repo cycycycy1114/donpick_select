@@ -1,8 +1,5 @@
 {
-"git": {
-    "deploymentEnabled": {
-      "production": false,
-      "preview": true
-    }
+  "git": {
+    "deploymentEnabled": false
   }
 }
