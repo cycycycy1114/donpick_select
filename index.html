@@ -1083,6 +1083,7 @@
           quantity: item.quantity,
           totalPrice: item.totalPrice,
           imageUrl: item.imageUrl || '',
+          saleType: item.saleType,
           promoRulesSummary: promoSummary // 👈 附帶優惠摘要
         };
       }); // 👈 補上這裡的閉合括號！
@@ -1107,9 +1108,7 @@
           // 🔍 檢查購物車內是否有任何商品是「現貨」
           const hasInStockItem = cart.some(item => {
             // 檢查商品名稱、規格或您儲存的屬性是否包含「現貨」
-            return (item.product && item.product.includes('現貨')) || 
-                   (item.spec && item.spec.includes('現貨')) ||
-                   (item.promoRulesSummary && item.promoRulesSummary.includes('現貨'));
+            return (item.saleType && item.saleType.includes('現貨'));
           });
 
           // 💡 智慧引導：如果選擇 7-11 店到店，提供賣貨便連結按鈕
