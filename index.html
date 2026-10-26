@@ -1113,7 +1113,7 @@
           });
 
           // 💡 智慧引導：如果選擇 7-11 店到店，提供賣貨便連結按鈕
-          let ivaHtml = '✅ 訂單送出成功！';
+          let msgHtml = '✅ 訂單送出成功！';
           
           // 💡 只有「7-11 店到店」且「含有現貨商品」時才跳轉賣貨便
           if (delivery === '7-11 店到店' && hasInStockItem) {
@@ -1127,7 +1127,7 @@
           } else {
             msgHtml += '<br>商品為預購制（或選擇非 7-11 寄送），請截圖私訊 LINE 客服。';
           }
-          msg.innerHTML = ivaHtml;
+          msg.innerHTML = msgHtml;
           cart = [];
           window.renderCart();
           setTimeout(() => {
