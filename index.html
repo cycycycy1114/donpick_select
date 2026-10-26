@@ -1108,7 +1108,9 @@
           // 🔍 檢查購物車內是否有任何商品是「現貨」
           const hasInStockItem = cart.some(item => {
             // 檢查商品名稱、規格或您儲存的屬性是否包含「現貨」
-            return (item.saleType && item.saleType.includes('現貨'));
+            const styp = String(item.saleType || '').trim();
+            const clstyp = styp.replace(/^[🟢🔴🟡✅❌⛔✔️✖️\s]+/g, '').replace(/[^\w\u4e00-\u9fa5]/g, '').trim();
+            return (clstyp && clstyp=='現貨');
           });
 
           // 💡 智慧引導：如果選擇 7-11 店到店，提供賣貨便連結按鈕
