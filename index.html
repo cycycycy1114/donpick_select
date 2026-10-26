@@ -759,38 +759,47 @@
       };
     }
     
-    // 記錄每個商品卡片目前顯示到第幾張圖的索引
-    const cardImageIndexes = {};
-    function switchCardImage(cardIndex, direction, productName) {
-      // 從 allProducts 中找出屬於這個 productName 的所有不重複圖片
-      const matched = allProducts.filter(p => (p.productName || '精選商品') === productName);
-      const urls = [];
-      matched.forEach(m => {
-        if (m.imageUrls && !urls.includes(m.imageUrls)) urls.push(m.imageUrls);
+ // 記錄每個商品卡片目前顯示到第幾張圖的索引
+const cardImageIndexes = {};
+function switchCardImage(cardIndex, direction, productName) {
+  // 從 allProducts 中找出屬於這個 productName 的所有不重複圖片
+  const matched = allProducts.filter(p => (p.productName || '精選商品') === productName);
+  const urls = [];
+  
+  matched.forEach(m => {
+    // 💡 修正 1：檢查 m.imageUrl（單張圖片網址），如果是陣列或字串都安全處理
+    if (Array.isArray(m.imageUrls)) {
+      m.imageUrls.forEach(url => {
+        if (url && !urls.includes(url)) urls.push(url);
       });
-
-      if (urls.length <= 1) return;
-
-      if (cardImageIndexes[cardIndex] === undefined) {
-        cardImageIndexes[cardIndex] = 0;
-      }
-
-      cardImageIndexes[cardIndex] += direction;
-
-      // 循環切換（第一張往前會變最後一張，最後一張往後會循環回第一張）
-      if (cardImageIndexes[cardIndex] < 0) {
-        cardImageIndexes[cardIndex] = urls.length - 1;
-      } else if (cardImageIndexes[cardIndex] >= urls.length) {
-        cardImageIndexes[cardIndex] = 0;
-      }
-
-      const newUrl = urls[cardImageIndexes[cardIndex]];
-      const imgEl = document.getElementById(`card-img-${cardIndex}`);
-      if (imgEl) {
-        imgEl.src = newUrl;
-        imgEl.setAttribute('onclick', `event.stopPropagation(); openLightbox('${newUrl}')`);
-      }
     }
+    if (m.imageUrl && !urls.includes(m.imageUrl)) {
+      urls.push(m.imageUrl);
+    }
+  });
+
+  if (urls.length <= 1) return;
+
+  if (cardImageIndexes[cardIndex] === undefined) {
+    cardImageIndexes[cardIndex] = 0;
+  }
+
+  cardImageIndexes[cardIndex] += direction;
+
+  // 循環切換（第一張往前會變最後一張，最後一張往後會循環回第一張）
+  if (cardImageIndexes[cardIndex] < 0) {
+    cardImageIndexes[cardIndex] = urls.length - 1;
+  } else if (cardImageIndexes[cardIndex] >= urls.length) {
+    cardImageIndexes[cardIndex] = 0;
+  }
+
+  const newUrl = urls[cardImageIndexes[cardIndex]];
+  const imgEl = document.getElementById(`card-img-${cardIndex}`);
+  if (imgEl) {
+    imgEl.src = newUrl;
+    imgEl.setAttribute('onclick', `event.stopPropagation(); openLightbox('${newUrl}')`);
+  }
+}
 
     window.openModal = function(productName) {
       currentSelectedProduct = productName;
