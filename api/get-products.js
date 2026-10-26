@@ -133,7 +133,6 @@ export default async function handler(req, res) {
     }
 
     // 2. 查詢 C 表 (款式明細表)
-    const cPageId = page.id;
     const cRes = await notion.databases.query({ database_id: productDetailDbId, page_size: 100 });
     const products = [];
 
@@ -221,7 +220,7 @@ export default async function handler(req, res) {
         }
 
         // 🎯 核心：取得該款式對應到的 Notion 優惠規則陣列
-        const assignedRules = promoRulesMap[cPageId] || [];
+        const assignedRules = promoRulesMap[parentId] || [];
         
         products.push({
           productName: parentData.productName,
