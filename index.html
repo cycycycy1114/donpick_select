@@ -571,8 +571,8 @@
         }
         if (p.price) productGroups[name].prices.push(p.price);
         // 收集所有不重複的圖片網址
-        if (p.imageUrl && !productGroups[name].imageUrls.includes(p.imageUrl)) {
-          productGroups[name].imageUrls.push(p.imageUrl);
+        if (p.imageUrl && !productGroups[name].imageUrl.includes(p.imageUrl)) {
+          productGroups[name].imageUrl.push(p.imageUrl);
         }
         if (p.deadline) productGroups[name].deadline = p.deadline;
         if (p.description && !productGroups[name].description) productGroups[name].description = p.description;
@@ -767,7 +767,7 @@
       const matched = allProducts.filter(p => (p.productName || '精選商品') === productName);
       const urls = [];
       matched.forEach(m => {
-        if (m.imageUrl && !urls.includes(m.imageUrl)) urls.push(m.imageUrl);
+        if (m.imageUrls && !urls.includes(m.imageUrls)) urls.push(m.imageUrls);
       });
 
       if (urls.length <= 1) return;
