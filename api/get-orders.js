@@ -250,7 +250,9 @@ export default async function handler(req, res) {
         promoRulesSummary: row.promoRulesSummary // 👈 確保前端能讀到優惠內容
       });
 
+      if (!row.paymentStatus.includes('已取消')) {
       groupedOrdersMap[timeKey].grandTotal += row.totalPrice;
+      }
 
       if (!row.paymentStatus.includes('已付款') && !row.paymentStatus.includes('結清') && !row.paymentStatus.includes('已取消')) {
         groupedOrdersMap[timeKey].unpaidTotal += row.totalPrice;
