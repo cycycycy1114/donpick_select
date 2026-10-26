@@ -1103,12 +1103,29 @@
         const data = await res.json();
         if (data.success) {
           msg.style.color = 'green';
+
+          // 🔍 檢查購物車內是否有任何商品是「現貨」
+          const hasInStockItem = cart.some(item => {
+            // 檢查商品名稱、規格或您儲存的屬性是否包含「現貨」
+            return (item.product && item.product.includes('現貨')) || 
+                   (item.spec && item.spec.includes('現貨')) ||
+                   (item.promoRulesSummary && item.promoRulesSummary.includes('現貨'));
+          });
+
           // 💡 智慧引導：如果選擇 7-11 店到店，提供賣貨便連結按鈕
           let ivaHtml = '✅ 訂單送出成功！';
-          if (delivery === '7-11 店到店') {
-            ivaHtml += `<br><br><a href="https://myship.7-11.com.tw/general/detail/GM2503295304873" target="_blank" style="display: inline-block; background: #2a9d8f; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 6px;">👉 點擊前往 7-11 賣貨便下單結帳</a>`;
+          
+          // 💡 只有「7-11 店到店」且「含有現貨商品」時才跳轉賣貨便
+          if (delivery === '7-11 店到店' && hasInStockItem) {
+            const myshipUrl = "https://myship.7-11.com.tw/general/detail/GM2503295304873";
+            
+            // 自動開啟賣貨便
+            window.open(myshipUrl, '_blank');
+
+            msgHtml += `<br><br><span style="color: #d32f2f; font-weight: bold;">📦 您的訂單包含現貨商品！系統已為您開啟賣貨便頁面。</span><br>` +
+                       `<a href="${myshipUrl}" target="_blank" style="display: inline-block; background: #2a9d8f; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 8px;">👉 若未自動跳轉，請點此前往 7-11 賣貨便結帳</a>`;
           } else {
-            ivaHtml += '<br>請截圖私訊 LINE 客服核對。';
+            msgHtml += '<br>商品為預購制（或選擇非 7-11 寄送），請截圖私訊 LINE 客服。';
           }
           msg.innerHTML = ivaHtml;
           cart = [];
