@@ -359,6 +359,8 @@
 
       <div id="modalPriceSummary" style="font-size: 14px; color: var(--milk-red); margin: 12px 0; font-weight: bold; text-align: right;">
         單價： $<span id="modalUnitPrice">0</span> | 小計：$ <span id="modalSubtotal">0</span>
+         <!-- 🎯 新增這個容器，用來動態呈現優惠標籤/提示 -->
+         <div id="modalPromoBadge" style="margin-top: 6px;"></div>
       </div>
 
       <button type="button" class="product-card-btn" id="modalAddToCartBtn" onclick="window.addModalItemToCart()">➕ 加入購物車</button>
@@ -558,7 +560,7 @@
         if (!productGroups[name]) {
           productGroups[name] = {
             productName: name,
-            imageUrls: [], // 收集所有圖片
+            imageUrls: p.imageUrls || [], // 收集所有圖片
             imageUrl: p.imageUrl || '',
             prices: [],
             saleType: p.saleType,
@@ -712,11 +714,11 @@
 
           if (i >= t) {
             let setCost = 0;
-            if (rule.type === '指定特價') {
+            if (rule.type === '指定價格') {
               setCost = v;
             } else if (rule.type === '現折金額') {
               setCost = (basePrice * t) - v;
-            } else if (rule.type === '打折百分比') {
+            } else if (rule.type === '打折筆數') {
               setCost = (basePrice * t) * (v / 100);
             }
 
@@ -883,13 +885,38 @@
         
         // 計算折後總金額
         const subtotal = calculateItemTotalWithBestCombination(basePrice, qty, rules);
-        const effectiveUnitPrice = Math.round(subtotal / qty); // 平均單價顯示        
         
-        document.getElementById('modalUnitPrice').innerText = effectiveUnitPrice; 
+        document.getElementById('modalUnitPrice').innerText = basePrice; 
         document.getElementById('modalSubtotal').innerText = subtotal;
-       } else { 
+        
+        // 2. 🎯 動態產生優惠標籤內容
+        if (rules.length > 0) {
+          const sortedRules = [...rules].sort((a, b) => (b.priority || 0) - (a.priority || 0));
+          const bestRule = sortedRules[0];
+
+          if (qty >= bestRule.threshold) {
+            // 已達到門檻
+            badgeContainer.innerHTML = `
+              <span style="font-size: 12px; color: #e11d48; background-color: #ffe4e6; padding: 3px 8px; border-radius: 4px; font-weight: normal; display: inline-block;">
+                🏷️ 已套用優惠：${calcResult.summary}
+              </span>
+            `;
+          } else {
+            // 還差幾件達門檻
+            const diff = bestRule.threshold - qty;
+            badgeContainer.innerHTML = `
+              <span style="font-size: 12px; color: #d97706; background-color: #fef3c7; padding: 3px 8px; border-radius: 4px; font-weight: normal; display: inline-block;">
+                💡 再買 ${diff} 件即可享 ${bestRule.type}（滿 ${bestRule.threshold} 件）！
+              </span>
+            `;
+          }
+        } else {
+          badgeContainer.innerHTML = ''; // 無優惠時清空
+        }
+      } else { 
         document.getElementById('modalUnitPrice').innerText = '0'; 
         document.getElementById('modalSubtotal').innerText = '0'; 
+        if (badgeContainer) badgeContainer.innerHTML = '';
        }
     };
 
