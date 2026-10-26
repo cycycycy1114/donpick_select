@@ -60,7 +60,7 @@ export default async function handler(req, res) {
       const productTitle = item.product || '';
       const specName = item.spec || '圖片款';
       const quantity = Number(item.quantity) || 1;
-      const promoSum = item.promoSummary || '無優惠';
+      const promoSum = item.promoRulesSummary || '無優惠';
       
       // 計算單價與總金額
       const unitPrice = Number(item.price || item.unitPrice || (item.totalPrice ? Math.round(item.totalPrice / quantity) : 0));
