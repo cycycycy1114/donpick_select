@@ -220,7 +220,7 @@ export default async function handler(req, res) {
         }
 
         // 🎯 核心：取得該款式對應到的 Notion 優惠規則陣列
-        const assignedRules = promoRulesMap[parentId] || [];
+        const assignedRules = promoRulesMap[page.id] || [];
         
         products.push({
           productName: parentData.productName,
