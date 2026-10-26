@@ -54,7 +54,6 @@ export default async function handler(req, res) {
           cRes.results.forEach(page => {
             const p = page?.properties || {};
 
-            // 尋找 C 表中指向 B 表的 Relation 欄位
             let parentName = '';
             const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
             if (relKey && p[relKey]?.relation && Array.isArray(p[relKey].relation) && p[relKey].relation.length > 0) {
@@ -64,7 +63,6 @@ export default async function handler(req, res) {
               }
             }
 
-            // 如果 Relation 沒抓到，嘗試從文字欄位備用讀取
             if (!parentName) {
               const textKey = Object.keys(p).find(k => k.includes('商品') || k.includes('主商品') || k.includes('Product'));
               if (textKey && p[textKey]?.rich_text?.[0]) {
@@ -72,14 +70,12 @@ export default async function handler(req, res) {
               }
             }
 
-            // 取得 C 表的款式名稱 (Title)
-            let styleName = '標準款式';
+            let styleName = '圖片款';
             const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
             if (titleKey && p[titleKey]?.title?.[0]) {
-              styleName = p[titleKey].title.map(t => t?.plain_text || '').join('').trim() || '標準款式';
+              styleName = p[titleKey].title.map(t => t?.plain_text || '').join('').trim() || '圖片款';
             }
 
-            // 🎯 修正：正確透過 p[k]?.type === 'files' 或欄位名稱「款式圖片」取得 C 表圖片
             let imageUrl = '';
             Object.keys(p).forEach(k => {
               const prop = p[k];
@@ -93,7 +89,6 @@ export default async function handler(req, res) {
               }
             });
 
-            // 建立對應字典
             if (imageUrl) {
               const cleanParent = (parentName || '').trim();
               const cleanStyle = (styleName || '').trim();
@@ -128,7 +123,7 @@ export default async function handler(req, res) {
         let contactInfo = '';
         let contactChannel = '';
         let product = '';
-        let spec = '標準款式';
+        let spec = '圖片款';
         let quantity = 1;
         let totalPrice = 0;
         let delivery = '7-11 店到店';
@@ -136,6 +131,7 @@ export default async function handler(req, res) {
         let fulfillmentStatus = '備貨中';
         let paymentStatus = '未付款';
         let imageUrl = '';
+        let promoSummary = '無優惠'; // 👈 新增：預設無優惠
 
         Object.keys(p).forEach(k => {
           const prop = p[k];
@@ -159,6 +155,9 @@ export default async function handler(req, res) {
               if (textVal) spec = textVal.trim();
             } else if (lowerKey.includes('備註') || lowerKey.includes('note')) {
               note = textVal;
+            } else if (lowerKey.includes('優惠') || lowerKey.includes('promo')) {
+              // 🎯 核心：讀取 Notion 中的優惠活動欄位內容
+              promoSummary = textVal || '無優惠';
             }
           } else if (prop.type === 'select' && prop.select?.name) {
             const selectVal = prop.select.name;
@@ -182,7 +181,6 @@ export default async function handler(req, res) {
         const cleanProduct = (product || '').trim();
         const cleanSpec = (spec || '').trim();
 
-        // 🎯 透過 B ➔ C 字典對應抓圖
         const k1 = `${cleanProduct}_${cleanSpec}`;
         const k2 = `${cleanProduct}_標準款式`;
         const k3 = cleanSpec;
@@ -215,6 +213,7 @@ export default async function handler(req, res) {
             fulfillmentStatus,
             paymentStatus,
             imageUrl,
+            promoRulesSummary: promoSummary, // 👈 傳給分組與前端
             createdAt: page.created_time ? page.created_time.substring(0, 16).replace('T', ' ') : ''
           });
         }
@@ -241,17 +240,19 @@ export default async function handler(req, res) {
         };
       }
 
+      // 🎯 將 promoRulesSummary 塞進品項陣列中
       groupedOrdersMap[timeKey].items.push({
         product: row.product,
         spec: row.spec,
         quantity: row.quantity,
         price: row.totalPrice,
-        imageUrl: row.imageUrl
+        imageUrl: row.imageUrl,
+        promoRulesSummary: row.promoRulesSummary // 👈 確保前端能讀到優惠內容
       });
 
       groupedOrdersMap[timeKey].grandTotal += row.totalPrice;
 
-      if (!row.paymentStatus.includes('已付款') && !row.paymentStatus.includes('結清')) {
+      if (!row.paymentStatus.includes('已付款') && !row.paymentStatus.includes('結清') && !row.paymentStatus.includes('已取消')) {
         groupedOrdersMap[timeKey].unpaidTotal += row.totalPrice;
       }
     });

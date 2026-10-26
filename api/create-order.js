@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     // 逐筆將購物車品項寫入 Notion 訂單資料庫
     for (const item of items) {
       const productTitle = item.product || '';
-      const specName = item.spec || '標準款式';
+      const specName = item.spec || '圖片款';
       const quantity = Number(item.quantity) || 1;
       
       // 計算單價與總金額
@@ -66,7 +66,15 @@ export default async function handler(req, res) {
       const totalPrice = Number(item.totalPrice || (unitPrice * quantity));
       grandTotal += totalPrice;
 
-      itemDetailsText.push(`• <b>${productTitle}</b> / 規格：${specName} x ${quantity} ($${totalPrice})`);
+      // 2. 組合基本品項明細文字
+      let line = `• <b>${productTitle}</b> / 規格：${specName} x ${quantity} ($${totalPrice})`;
+
+      // 3. 🎯 如果有優惠摘要，則額外附帶顯示在下方
+      if (item.promoRulesSummary && item.promoRulesSummary !== '無優惠') {
+       line += `<br>&nbsp;&nbsp;└ 🏷️ 優惠：${item.promoRulesSummary}`;
+      }
+
+      itemDetailsText.push(line);
 
       // 🎯 完全釘死您 Notion 資料庫的 11 個真實欄位與對應型態
       const properties = {
@@ -93,6 +101,9 @@ export default async function handler(req, res) {
         },
         "總金額": {
           number: totalPrice
+        },
+        "優惠活動": {
+          rich_text: [{ text: { content: promoSummary } }] // 👈 新增：寫入優惠條件摘要
         },
         "取貨方式": {
           select: { name: delivery || '7-11 店到店' }

@@ -13,9 +13,53 @@ export default async function handler(req, res) {
     const productDbId = process.env.PRODUCT_DB_ID || process.env.DATABASE_ID;       
     const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;                   
     const annDbId = process.env.ANNOUNCEMENT_DATABASE_ID || process.env.ANNOUNCEMENT_DB_ID;
+    const promoRulesDbId = process.env.PROMO_RULES_DB_ID;       // 優惠規則表
 
     if (!productDetailDbId) {
       return res.status(500).json({ success: false, error: '伺服器未設定 PRODUCT_DETAIL_DB_ID 環境變數' });
+    }
+
+    // 0. 查詢 Promo_Rules 優惠規則資料庫
+    const promoRulesMap = {}; // key 是 C 表的 page.id，value 是該款式的優惠規則陣列
+    
+    try {
+      const promoRes = await notion.databases.query({ database_id: promoRulesDbId });
+      
+      promoRes.results.forEach(page => {
+        const p = page.properties;
+        
+        // 1. 🛡️ 檢查是否「啟用」：沒打勾或設為隱藏就自動忽略
+        let isActive = false;
+        const activeKey = Object.keys(p).find(k => k.includes('啟用') || k.includes('狀態') || p[k].type === 'checkbox');
+        if (activeKey) {
+          isActive = p[activeKey].type === 'checkbox' ? p[activeKey].checkbox : (p[activeKey].select?.name === '啟用');
+        }
+        
+        if (!isActive) return; // 沒啟用的活動直接跳過！
+
+        // 2. 抓取關聯的 C 表款式 ID (支援多個關聯)
+        let targetStyleIds = [];
+        const relKey = Object.keys(p).find(k => k[k].type === 'relation');
+        if (relKey && p[relKey].relation) {
+          targetStyleIds = p[relKey].relation.map(r => r.id);
+        }
+        
+        // 3. 讀取門檻、類型、數值與優先級
+        const threshold = p['門檻數量']?.number || 3;
+        const type = p['優惠類型']?.select?.name || '指定價格';
+        const value = p['優惠數值']?.number || 0;
+        const priority = p['優先級']?.number || 1;
+
+        // 4. 將規則配對給對應的 C 表款式 ID
+        targetStyleIds.forEach(styleId => {
+          if (!promoRulesMap[styleId]) {
+            promoRulesMap[styleId] = [];
+          }
+          promoRulesMap[styleId].push({ threshold, type, value, priority });
+        });
+      });
+    } catch (promoErr) {
+      console.warn("Promo_Rules 查詢失敗或未設定，將略過優惠：", promoErr.message);
     }
 
     // 1. 查詢 A 表 (主商品表)
@@ -66,7 +110,21 @@ export default async function handler(req, res) {
                 if (val === '是' || val === '需訂金' || val === 'yes' || val === 'true') needDeposit = true;
               }
             }
-            aMapById[page.id] = { productName, description, needDeposit, categories };
+
+             // 抓取是否新上架 (newproduce)
+            let newproduce = false;
+            const newproKey = Object.keys(p).find(k => k.includes('新品') || k.includes('新上架'));
+            if (newproKey && p[newproKey]) {
+              const nwprop = p[newproKey];
+              if (nwprop.type === 'checkbox') newproduce = nwprop.checkbox;
+              else if (nwprop.type === 'select' && nwprop.select?.name) {
+                const nwval = prop.select.name.toLowerCase();
+                if (nwval === '是' || nwval === '新品' || nwval === 'yes' || nwval === 'true' || nwval === '新上架') 
+                  newproduce = true;
+              }
+            }
+
+            aMapById[page.id] = { productName, description, categories, needDeposit, newproduce };
           });
         }
       } catch (e) {
@@ -82,13 +140,14 @@ export default async function handler(req, res) {
       cRes.results.forEach(page => {
         const p = page?.properties || {};
 
-        // 🎯 款式名稱 (Title) 安全防呆
-        let styleName = '標準款式';
+        //款式名稱 (Title)
+        let styleName = '圖片款';
         const titleKey = Object.keys(p).find(k => p[k]?.type === 'title');
         if (titleKey && p[titleKey]?.title && Array.isArray(p[titleKey].title) && p[titleKey].title.length > 0) {
-          styleName = p[titleKey].title.map(t => t?.plain_text || '').join('').trim() || '標準款式';
+          styleName = p[titleKey].title.map(t => t?.plain_text || '').join('').trim() || '圖片款';
         }
 
+        //商品名稱(relation)
         let parentData = null;
         const relKey = Object.keys(p).find(k => p[k]?.type === 'relation');
         if (relKey && p[relKey]?.relation && Array.isArray(p[relKey].relation) && p[relKey].relation.length > 0) {
@@ -105,8 +164,9 @@ export default async function handler(req, res) {
           parentData = {
             productName: fallbackName,
             description: '',
-            deadline: '',
-            categories: ['全部']
+            categories: ['全部'],
+            needDeposit:false,
+            newproduce:true
           };
         }
 
@@ -117,12 +177,15 @@ export default async function handler(req, res) {
           price = p[preferredPriceKey]?.number || 0;
         }
 
-        let imageUrl = '';
+
+        // 假設你在解析商品資料時，抓取 Files 欄位：
+        let imageUrls = [];
         const imgKey = Object.keys(p).find(k => p[k]?.type === 'files');
-        if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files) && p[imgKey].files.length > 0) {
-          const fileObj = p[imgKey].files[0];
-          imageUrl = fileObj?.file?.url || fileObj?.external?.url || '';
+        if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files)) {
+          imageUrls = p[imgKey].files.map(f => f?.file?.url || f?.external?.url || '').filter(Boolean);
         }
+
+        const imageUrl = imageUrls.length > 0 ? imageUrls[0] : ''; // 第一張圖當預設封面
         
         let saleType = '預購';
         const statusKey = Object.keys(p).find(k => k && (k.includes('狀態') || p[k]?.type === 'status' || p[k]?.type === 'select' || p[k]?.type === 'formula'));
@@ -145,7 +208,7 @@ export default async function handler(req, res) {
           }
         }
 
-        // 🎯 強制從 C 表抓取收單日期 (deadline)
+        // 🎯 抓取收單日期 (deadline)
         let deadline = '';
         const cDateKey = Object.keys(p).find(k => p[k]?.type === 'date' || k.includes('收單') || k.includes('截止') || k.includes('日期'));
         if (cDateKey && p[cDateKey]) {
@@ -155,6 +218,9 @@ export default async function handler(req, res) {
             deadline = p[cDateKey].rich_text.map(t => t.plain_text || '').join('');
           }
         }
+
+        // 🎯 核心：取得該款式對應到的 Notion 優惠規則陣列
+        const assignedRules = promoRulesMap[cPageId] || [];
         
         products.push({
           productName: parentData.productName,
@@ -165,7 +231,9 @@ export default async function handler(req, res) {
           imageUrl,
           deadline,
           description: parentData.description,
-          needDeposit: parentData.needDeposit
+          needDeposit: parentData.needDeposit,
+          newproduce: parentData.newproduce,
+          promoRules: assignedRules // 👈 完美帶入前台！
         });
       });
     }
