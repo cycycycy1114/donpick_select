@@ -624,10 +624,14 @@
           btnText = '🔍 瀏覽歷史紀錄';
           btnClass = 'product-card-btn ended-btn';
         } else {
-          if (cleanS && cleanS.includes('倒數')) {
-            badgesHtml += `<span class="badge" style="background: #ff4d4f; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px;">⏳ 倒數收單</span>`;
+          if (cleanS && cleanS.includes('現貨')){
+            badgesHtml += `<span class="badge" style="background: ##000080; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px;">⏳ 倒數收單</span>`;          
           } else {
-            badgesHtml += `<span class="badge">預購中</span>`;
+            if (cleanS && cleanS.includes('倒數')) {
+              badgesHtml += `<span class="badge" style="background: #ff4d4f; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px;">⏳ 倒數收單</span>`;
+             } else {
+               badgesHtml += `<span class="badge">預購中</span>`;
+             }
           }
           if (item.needDeposit) {
             badgesHtml += `<span class="badge badge-deposit" style="background:#fa8c16; color:#fff; margin-left:4px;">需訂金</span>`;
@@ -759,47 +763,52 @@
       };
     }
     
- // 記錄每個商品卡片目前顯示到第幾張圖的索引
-const cardImageIndexes = {};
-function switchCardImage(cardIndex, direction, productName) {
-  // 從 allProducts 中找出屬於這個 productName 的所有不重複圖片
-  const matched = allProducts.filter(p => (p.productName || '精選商品') === productName);
-  const urls = [];
+    const cardImageIndexes = {};
+    // 記錄每個商品卡片目前顯示到第幾張圖的索引
+    // 從 allProducts 中找出屬於這個 productName 的所有不重複圖片
+    function switchCardImage(cardIndex, direction, productName) {
+      const urls = [];
+      const matched = allProducts.filter(p => (p.productName || '精選商品') === productName);
   
-  matched.forEach(m => {
-    // 💡 修正 1：檢查 m.imageUrl（單張圖片網址），如果是陣列或字串都安全處理
-    if (Array.isArray(m.imageUrls)) {
-      m.imageUrls.forEach(url => {
-        if (url && !urls.includes(url)) urls.push(url);
+      matched.forEach(m => {
+        // 檢查 m.imageUrls 陣列
+        if (Array.isArray(m.imageUrls)) {
+          m.imageUrls.forEach(url => {
+            if (url && !urls.includes(url)) {
+              urls.push(url);
+            }
+          });
+        }
+        
+        // 檢查 m.imageUrl 單張字串
+        if (m.imageUrl && !urls.includes(m.imageUrl)) {
+          urls.push(m.imageUrl);
+        }
       });
+      
+      if (urls.length <= 1) return;
+  
+      // 修正：必須先判斷是否為 undefined，再決定是否初始化為 0
+      if (cardImageIndexes[cardIndex] === undefined) {
+        cardImageIndexes[cardIndex] = 0;
+      }
+  
+      cardImageIndexes[cardIndex] += direction;
+
+      // 循環切換（第一張往前會變最後一張，最後一張往後會循環回第一張）
+      if (cardImageIndexes[cardIndex] < 0) {
+        cardImageIndexes[cardIndex] = urls.length - 1;
+      } else if (cardImageIndexes[cardIndex] >= urls.length) {
+        cardImageIndexes[cardIndex] = 0;
+      }
+
+      const newUrl = urls[cardImageIndexes[cardIndex]];
+      const imgEl = document.getElementById(`card-img-${cardIndex}`);
+      if (imgEl) {
+        imgEl.src = newUrl;
+        imgEl.setAttribute('onclick', `event.stopPropagation(); openLightbox('${newUrl}')`);
+      }
     }
-    if (m.imageUrl && !urls.includes(m.imageUrl)) {
-      urls.push(m.imageUrl);
-    }
-  });
-
-  if (urls.length <= 1) return;
-
-  if (cardImageIndexes[cardIndex] === undefined) {
-    cardImageIndexes[cardIndex] = 0;
-  }
-
-  cardImageIndexes[cardIndex] += direction;
-
-  // 循環切換（第一張往前會變最後一張，最後一張往後會循環回第一張）
-  if (cardImageIndexes[cardIndex] < 0) {
-    cardImageIndexes[cardIndex] = urls.length - 1;
-  } else if (cardImageIndexes[cardIndex] >= urls.length) {
-    cardImageIndexes[cardIndex] = 0;
-  }
-
-  const newUrl = urls[cardImageIndexes[cardIndex]];
-  const imgEl = document.getElementById(`card-img-${cardIndex}`);
-  if (imgEl) {
-    imgEl.src = newUrl;
-    imgEl.setAttribute('onclick', `event.stopPropagation(); openLightbox('${newUrl}')`);
-  }
-}
 
     window.openModal = function(productName) {
       currentSelectedProduct = productName;
@@ -898,56 +907,56 @@ function switchCardImage(cardIndex, direction, productName) {
         document.getElementById('modalUnitPrice').innerText = basePrice; 
         document.getElementById('modalSubtotal').innerText = subtotal.totalPrice;
         
-// 2. 🎯 動態產生優惠標籤內容（完美支援多種條件與多級距）
-    if (rules && rules.length > 0) {
-      // 依照門檻由小到大排序，方便判斷階級
-      const sortedRules = [...rules].sort((a, b) => (a.threshold || 0) - (b.threshold || 0));
+        // 2. 🎯 動態產生優惠標籤內容（完美支援多種條件與多級距）
+        if (rules && rules.length > 0) {
+          // 依照門檻由小到大排序，方便判斷階級
+          const sortedRules = [...rules].sort((a, b) => (a.threshold || 0) - (b.threshold || 0));
       
-      // 找出當前數量已經達到（或超過）的最高一條規則
-      let matchedRule = null;
-      let nextRule = null;
+          // 找出當前數量已經達到（或超過）的最高一條規則
+          let matchedRule = null;
+          let nextRule = null;
 
-      for (let i = 0; i < sortedRules.length; i++) {
-        if (qty >= sortedRules[i].threshold) {
-          matchedRule = sortedRules[i]; // 已經達到的最高門檻
+          for (let i = 0; i < sortedRules.length; i++) {
+            if (qty >= sortedRules[i].threshold) {
+              matchedRule = sortedRules[i]; // 已經達到的最高門檻
+            } else {
+              nextRule = sortedRules[i];    // 還差一點點就能夠到的下一個升級門檻
+              break;
+            }
+          }
+
+          if (matchedRule) {
+            // 🌟 狀況 A：已經達到至少一個門檻（已享優惠）
+            let upgradeText = '';
+            if (nextRule) {
+              const diffToNext = nextRule.threshold - qty;
+              upgradeText = `<br><span style="font-size: 11px; color: #0284c7;">🚀 再買 ${diffToNext} 件可升級至「${nextRule.type}（滿 ${nextRule.threshold} 件）」！</span>`;
+            }
+
+            badgeContainer.innerHTML = `
+              <span style="font-size: 12px; color: #e11d48; background-color: #ffe4e6; padding: 4px 8px; border-radius: 4px; font-weight: normal; display: inline-block; line-height: 1.5;">
+                🏷️ 已套用優惠：${subtotal.summary}
+                ${upgradeText}
+              </span>
+            `;
+          } else {
+            // 💡 狀況 B：連最低門檻都還沒到（提示距離最近的門檻）
+            const firstRule = sortedRules[0];
+            const diff = firstRule.threshold - qty;
+            badgeContainer.innerHTML = `
+              <span style="font-size: 12px; color: #d97706; background-color: #fef3c7; padding: 4px 8px; border-radius: 4px; font-weight: normal; display: inline-block;">
+                💡 再買 ${diff} 件即可享 ${firstRule.type}（滿 ${firstRule.threshold} 件）！
+              </span>
+            `;
+          }
         } else {
-          nextRule = sortedRules[i];    // 還差一點點就能夠到的下一個升級門檻
-          break;
+          if (badgeContainer) badgeContainer.innerHTML = ''; // 沒有設定優惠規則就保持空白
         }
-      }
-
-      if (matchedRule) {
-        // 🌟 狀況 A：已經達到至少一個門檻（已享優惠）
-        let upgradeText = '';
-        if (nextRule) {
-          const diffToNext = nextRule.threshold - qty;
-          upgradeText = `<br><span style="font-size: 11px; color: #0284c7;">🚀 再買 ${diffToNext} 件可升級至「${nextRule.type}（滿 ${nextRule.threshold} 件）」！</span>`;
-        }
-
-        badgeContainer.innerHTML = `
-          <span style="font-size: 12px; color: #e11d48; background-color: #ffe4e6; padding: 4px 8px; border-radius: 4px; font-weight: normal; display: inline-block; line-height: 1.5;">
-            🏷️ 已套用優惠：${subtotal.summary}
-            ${upgradeText}
-          </span>
-        `;
-      } else {
-        // 💡 狀況 B：連最低門檻都還沒到（提示距離最近的門檻）
-        const firstRule = sortedRules[0];
-        const diff = firstRule.threshold - qty;
-        badgeContainer.innerHTML = `
-          <span style="font-size: 12px; color: #d97706; background-color: #fef3c7; padding: 4px 8px; border-radius: 4px; font-weight: normal; display: inline-block;">
-            💡 再買 ${diff} 件即可享 ${firstRule.type}（滿 ${firstRule.threshold} 件）！
-          </span>
-        `;
-      }
-    } else {
-      if (badgeContainer) badgeContainer.innerHTML = ''; // 沒有設定優惠規則就保持空白
-    }
       } else { 
-        document.getElementById('modalUnitPrice').innerText = '0'; 
-        document.getElementById('modalSubtotal').innerText = '0'; 
-        if (badgeContainer) badgeContainer.innerHTML = '';
-       }
+          document.getElementById('modalUnitPrice').innerText = '0'; 
+          document.getElementById('modalSubtotal').innerText = '0'; 
+          if (badgeContainer) badgeContainer.innerHTML = '';
+      }
     };
 
     window.addModalItemToCart = function() {
@@ -984,60 +993,60 @@ function switchCardImage(cardIndex, direction, productName) {
       window.closeModal();
     };
 
-window.renderCart = function() {
-  const container = document.getElementById('cartContainer');
-  const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  let grandTotal = 0;
+    window.renderCart = function() {
+      const container = document.getElementById('cartContainer');
+      const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+      let grandTotal = 0;
 
-  document.getElementById('floatCartCount').innerText = totalCount;
+      document.getElementById('floatCartCount').innerText = totalCount;
 
-  if (cart.length === 0) {
-    container.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 12px;">購物車尚無商品</div>';
-    document.getElementById('floatGrandTotal').innerText = '0';
-    document.getElementById('cartCount').innerText = '0';
-    document.getElementById('grandTotal').innerText = '0';
-    return;
-  }
+      if (cart.length === 0) {
+        container.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 12px;">購物車尚無商品</div>';
+        document.getElementById('floatGrandTotal').innerText = '0';
+        document.getElementById('cartCount').innerText = '0';
+        document.getElementById('grandTotal').innerText = '0';
+        return;
+      }
 
-  container.innerHTML = '';
-  cart.forEach((item, index) => {
-    // 🎯 呼叫我們的萬用組合計算，同時取得「折後總價」與「精準優惠字眼」
-    const calcResult = calculateItemTotalWithBestCombination(item.price, item.quantity, item.promoRules);
+      container.innerHTML = '';
+      cart.forEach((item, index) => {
+        // 🎯 呼叫我們的萬用組合計算，同時取得「折後總價」與「精準優惠字眼」
+        const calcResult = calculateItemTotalWithBestCombination(item.price, item.quantity, item.promoRules);
     
-    item.totalPrice = calcResult.totalPrice;       // 綁定計算後的折後價
-    item.promoRulesSummary = calcResult.summary;    // 綁定優惠摘要（準備寫回 Notion！）
+        item.totalPrice = calcResult.totalPrice;       // 綁定計算後的折後價
+        item.promoRulesSummary = calcResult.summary;    // 綁定優惠摘要（準備寫回 Notion！）
 
-    grandTotal += item.totalPrice;
+        grandTotal += item.totalPrice;
 
-    // 動態組裝畫面的優惠標籤
-    let promoBadgeHtml = '';
-    if (calcResult.summary && calcResult.summary !== '無優惠') {
-      promoBadgeHtml = `
-        <div style="font-size: 11px; color: #e11d48; background-color: #ffe4e6; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">
-          🏷️ 已套用優惠：${calcResult.summary}
-        </div>
-      `;
-    }
+        // 動態組裝畫面的優惠標籤
+        let promoBadgeHtml = '';
+        if (calcResult.summary && calcResult.summary !== '無優惠') {
+            promoBadgeHtml = `
+            <div style="font-size: 11px; color: #e11d48; background-color: #ffe4e6; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">
+              🏷️ 已套用優惠：${calcResult.summary}
+            </div>
+          `;
+        }
 
-    container.innerHTML += `
-      <div class="cart-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
-        <div style="flex: 1; padding-right: 8px;">
-          <strong>${item.product}</strong><br>
-          <span style="color:#666; font-size:12px;">規格: ${item.spec} x ${item.quantity}</span>
-          ${promoBadgeHtml} <!-- 👈 秀出正確組合的優惠字眼 -->
-        </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="color:var(--milk-red); font-weight:bold;">$${item.totalPrice}</span>
-          <button type="button" class="remove-btn" onclick="window.removeFromCart(${index})">刪除</button>
-        </div>
-      </div>
-    `;
-  });
+        container.innerHTML += `
+          <div class="cart-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee;">
+            <div style="flex: 1; padding-right: 8px;">
+              <strong>${item.product}</strong><br>
+              <span style="color:#666; font-size:12px;">規格: ${item.spec} x ${item.quantity}</span>
+              ${promoBadgeHtml} <!-- 👈 秀出正確組合的優惠字眼 -->
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="color:var(--milk-red); font-weight:bold;">$${item.totalPrice}</span>
+              <button type="button" class="remove-btn" onclick="window.removeFromCart(${index})">刪除</button>
+            </div>
+          </div>
+        `;
+      });
 
-  document.getElementById('floatGrandTotal').innerText = grandTotal;
-  document.getElementById('cartCount').innerText = totalCount;
-  document.getElementById('grandTotal').innerText = grandTotal;
-};
+      document.getElementById('floatGrandTotal').innerText = grandTotal;
+      document.getElementById('cartCount').innerText = totalCount;
+      document.getElementById('grandTotal').innerText = grandTotal;
+    };
 
     window.removeFromCart = function(index) { cart.splice(index, 1); window.renderCart(); };
     
@@ -1110,7 +1119,7 @@ window.renderCart = function() {
       }
     };
     
-   // 🛡️ 隱私遮罩函式：將聯絡 ID 或帳號進行部分隱藏（例如 ghhadrak -> gh****ak）
+    // 🛡️ 隱私遮罩函式：將聯絡 ID 或帳號進行部分隱藏（例如 ghhadrak -> gh****ak）
     function maskContact(contact) {
       if (!contact || contact.length <= 4) return '****';
       const start = contact.substring(0, 2);
