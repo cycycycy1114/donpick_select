@@ -625,13 +625,16 @@
           btnClass = 'product-card-btn ended-btn';
         } else {
           if (cleanS && cleanS.includes('現貨')){
-            badgesHtml += `<span class="badge" style="background: ##000080; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px;">⏳ 倒數收單</span>`;          
+            badgesHtml += `<span class="badge" style="background: ##198754; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px;">現貨</span>`;          
           } else {
             if (cleanS && cleanS.includes('倒數')) {
               badgesHtml += `<span class="badge" style="background: #ff4d4f; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 4px;">⏳ 倒數收單</span>`;
              } else {
                badgesHtml += `<span class="badge">預購中</span>`;
              }
+          }
+          if (item.newproduce) {
+            badgesHtml += `<span class="badge badge-deposit" style="background:#FD7E14; color:#fff; margin-left:4px;">新上架</span>`;
           }
           if (item.needDeposit) {
             badgesHtml += `<span class="badge badge-deposit" style="background:#fa8c16; color:#fff; margin-left:4px;">需訂金</span>`;
