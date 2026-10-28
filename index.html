@@ -600,8 +600,8 @@
         const currentImg = item.imageUrl || '';
         
         const imgTag = currentImg
-        ? `<img id="card-img-${index}" src="${currentImg}" alt="商品圖片" loading="lazy" referrerpolicy="no-referrer" onclick="event.stopPropagation(); openLightbox('${currentImg}')">`
-        : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
+          ? `<img id="card-img-${index}" src="${currentImg}" alt="商品圖片" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://via.placeholder.com/300x200/f4efe6/888888?text=No+Image';" onclick="event.stopPropagation(); openLightbox('${currentImg}')">`
+          : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
 
         // 如果有多張圖片，自動加上左右切換按鈕
         let slideBtnsHtml = '';
