@@ -177,20 +177,18 @@ export default async function handler(req, res) {
           price = p[preferredPriceKey]?.number || 0;
         }
 
-        // 🎯 穩健抓取 C 表的所有圖片網址陣列
+        // 🎯 在 api/get-products.js 中抓取 C 表圖片的標準萬用寫法
         let imageUrls = [];
-        const imgKey = Object.keys(p).find(k => p[k]?.type === 'files');
+        Object.keys(p).forEach(k => {
+          const prop = p[k];
+          if (prop && prop.type === 'files' && Array.isArray(prop.files)) {
+            const urls = prop.files.map(f => f?.file?.url || f?.external?.url || '').filter(Boolean);
+            if (urls.length > 0) {
+              imageUrls = imageUrls.concat(urls);
+            }
+          }
+        });
         
-        if (imgKey && p[imgKey]?.files && Array.isArray(p[imgKey].files)) {
-          imageUrls = p[imgKey].files.map(f => {
-            // 🎯 優先抓取外部連結，若無則抓內部檔案網址
-            let rawUrl = f?.external?.url || f?.file?.url || '';
-            
-            // 💡 防護罩：確保網址是字串且乾淨
-            return String(rawUrl).trim();
-          }).filter(Boolean);
-        }
-
         const imageUrl = imageUrls.length > 0 ? imageUrls[0] : '';
         
         let saleType = '預購';
