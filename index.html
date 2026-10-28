@@ -600,8 +600,8 @@
         const currentImg = item.imageUrl || '';
         
         const imgTag = currentImg
-          ? `<img id="card-img-${index}" src="${currentImg}" onclick="event.stopPropagation(); openLightbox('${currentImg}')">`
-          : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
+        ? `<img id="card-img-${index}" src="${currentImg}" alt="商品圖片" loading="lazy" referrerpolicy="no-referrer" onclick="event.stopPropagation(); openLightbox('${currentImg}')">`
+        : `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:12px;">無圖片</div>`;
 
         // 如果有多張圖片，自動加上左右切換按鈕
         let slideBtnsHtml = '';
@@ -866,9 +866,9 @@
       matchedStyles.forEach((style, idx) => {
         const card = document.createElement('div');
         card.className = 'style-card';
-        const imgTag = style.imageUrl 
-          ? `<img src="${style.imageUrl}" onclick="event.stopPropagation(); window.openLightbox('${style.imageUrl}')">` 
-          : `<div style="height:60px; background:#eee; font-size:10px; display:flex; align-items:center; justify-content:center;">無圖</div>`;
+        const imgTag = style.imageUrl
+        ? `<img src="${style.imageUrl}" referrerpolicy="no-referrer">`
+        : `<div style="height:70px; background:#eee; ...">無圖</div>`;
         
         card.innerHTML = `${imgTag}<div style="font-size:11px; font-weight:bold; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${style.styleName}</div><div style="font-size:10px; color:var(--milk-red);">$${style.price}</div>`;
         
