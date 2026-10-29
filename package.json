@@ -1,8 +1,11 @@
 {
   "name": "donpick",
   "version": "1.0.0",
+  "private": true,
   "dependencies": {
     "@google/genai": "^0.1.1",
-    "@notionhq/client": "^2.2.15"
+    "@notionhq/client": "^2.2.15",
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.6.7"
   }
 }
