@@ -233,45 +233,34 @@
       }
     }
 
-// 📍 修改位置：替換 admin.html 中的 uploadImage 函式
-async function uploadImage(fileInput) {
-  const file = fileInput.files[0];
-  if (!file) return;
+    // 📷 手機拍照或選相片後，直接轉成 Base64 暫存並填入隱藏/明細欄位
+    async function uploadImage(fileInput) {
+      const file = fileInput.files[0];
+      if (!file) return;
 
-  const urlInput = fileInput.parentElement.querySelector('.imageUrlInput');
-  const btn = fileInput.nextElementSibling;
-  
-  btn.innerText = '⏳ 處理圖片中...';
-  btn.style.background = '#faad14';
+      const urlInput = fileInput.parentElement.querySelector('.imageUrlInput');
+      const btn = fileInput.nextElementSibling;
+      
+      btn.innerText = '⏳ 處理圖片中...';
+      btn.style.background = '#faad14';
 
-  try {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    
-    reader.onload = async function() {
-      const base64String = reader.result.split(',')[1]; // 取得純 Base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
       
-      const res = await fetch('/api/upload-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64String, mimeType: file.type })
-      });
-      
-      const result = await res.json();
-      if (result.success) {
-        urlInput.value = result.link; // 將轉換好的圖片連結填入輸入框
+      reader.onload = function() {
+        // 直接將完整的 Data URL（或純 Base64）塞進輸入框
+        // 後端會自動判斷：如果是 http 就直接用，如果是 Base64 就會自動幫你上傳到 Notion 內建圖床！
+        urlInput.value = reader.result; 
         btn.innerText = '✅ 圖片已就緒';
         btn.style.background = '#52c41a';
-      } else {
-        throw new Error(result.error);
-      }
-    };
-  } catch (err) {
-    alert('圖片處理失敗: ' + err.message);
-    btn.innerText = '📷 選擇相片/拍照';
-    btn.style.background = '#2eaadc';
-  }
-}
+      };
+
+      reader.onerror = function() {
+        alert('圖片讀取失敗');
+        btn.innerText = '📷 選擇相片/拍照';
+        btn.style.background = '#2eaadc';
+      };
+    }
 
 // 📍 修改 admin.html 中的 handleAiShelfUpload 函式
 async function handleAiShelfUpload(fileInput) {
