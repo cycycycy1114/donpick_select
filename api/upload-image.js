@@ -1,10 +1,7 @@
-import fetch from 'node-fetch';
-import FormData from 'form-data';
-
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '10mb', // 允許較大的照片上傳
+      sizeLimit: '10mb', // 允許手機大張照片上傳
     },
   },
 };
@@ -22,26 +19,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '沒有收到圖片資料' });
     }
 
-    // 將 Base64 轉回 Buffer 透過後端幫你傳到 Imgur（後端繞過 CORS 限制，成功率 100%）
-    const buffer = Buffer.from(imageBase64, 'base64');
-    const formData = new FormData();
-    formData.append('image', buffer, { filename: 'upload.jpg', contentType: mimeType || 'image/jpeg' });
+    // 💡 這裡我們直接將圖片以 Data URL (Base64) 形式回傳給前端
+    // 這樣不僅不需要依賴外部圖床，而且可以直接相容於 Notion 外部檔案或網頁預覽
+    const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`;
 
-    const imgurRes = await fetch('https://api.imgur.com/3/image', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Client-ID 560248f76633fb6',
-        ...formData.getHeaders()
-      },
-      body: formData
-    });
-
-    const result = await imgurRes.json();
-    if (result.success) {
-      return res.status(200).json({ success: true, link: result.data.link });
-    } else {
-      throw new Error(result.data?.error?.message || 'Imgur 上傳失敗');
-    }
+    return res.status(200).json({ success: true, link: dataUrl });
 
   } catch (error) {
     console.error("Upload Error:", error);
