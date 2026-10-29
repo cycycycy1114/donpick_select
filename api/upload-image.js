@@ -1,6 +1,3 @@
-import fetch from 'node-fetch';
-import FormData from 'form-data';
-
 export const config = {
   api: {
     bodyParser: {
@@ -22,27 +19,48 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '沒有收到圖片資料' });
     }
 
-    const buffer = Buffer.from(imageBase64, 'base64');
-    const formData = new FormData();
-    formData.append('reqtype', 'fileupload');
-    formData.append('fileToUpload', buffer, { filename: 'upload.jpg', contentType: mimeType || 'image/jpeg' });
+    const githubToken = process.env.GITHUB_TOKEN;
+    const repo = process.env.GITHUB_REPO; // 格式: "username/repo"
+    const branch = process.env.GITHUB_BRANCH || 'main';
 
-    // 💡 改用 Catbox 匿名圖床 API，回傳結果直接就是純文字網址
-    const uploadRes = await fetch('https://catbox.moe/user/api.php', {
-      method: 'POST',
-      body: formData
+    if (!githubToken || !repo) {
+      return res.status(500).json({ success: false, error: '伺服器未設定 GitHub 圖床環境變數' });
+    }
+
+    // 產生獨一無二的檔名（以時間戳命名存放在 uploads/ 資料夾中）
+    const ext = mimeType && mimeType.includes('png') ? 'png' : 'jpg';
+    const fileName = `upload_${Date.now()}.${ext}`;
+    const filePath = `uploads/${fileName}`;
+
+    const githubApiUrl = `https://api.github.com/repos/${repo}/contents/${filePath}`;
+
+    // 呼叫 GitHub API 建立檔案 (Commit)
+    const githubResponse = await fetch(githubApiUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${githubToken}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'DonPick-Image-Uploader'
+      },
+      body: JSON.stringify({
+        message: `Upload image ${fileName} via DonPick system`,
+        content: imageBase64, // GitHub API 接受 Base64 格式
+        branch: branch
+      })
     });
 
-    const link = await uploadRes.text();
-    
-    if (uploadRes.ok && link && link.startsWith('http')) {
-      return res.status(200).json({ success: true, link: link.trim() });
+    const result = await githubResponse.json();
+
+    if (githubResponse.ok) {
+      // 組合出永久有效的 GitHub Raw 直連網址
+      const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/${filePath}`;
+      return res.status(200).json({ success: true, link: rawUrl });
     } else {
-      throw new Error(link || '圖片上傳伺服器回應失敗');
+      throw new Error(result.message || 'GitHub 上傳失敗');
     }
 
   } catch (error) {
-    console.error("Upload Error:", error);
+    console.error("GitHub Upload Error:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
 }
