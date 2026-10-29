@@ -112,11 +112,22 @@ export default async function handler(req, res) {
         cProperties[cDateKey] = { date: { start: deadline } };
       }
       
-      // 處理圖片網址
-      if (style.imageUrl && cFileKey) {
-        cProperties[cFileKey] = {
-          files: [{ name: "image", external: { url: style.imageUrl } }]
-        };
+      // 💡 雙軌並存寫入邏輯
+      if (style.imageUrl) {
+        // 1. 如果有對應到檔案欄位，且是標準網址，嘗試寫入 Files 欄位
+        if (cFileKey && style.imageUrl.startsWith('http')) {
+          cProperties[cFileKey] = {
+            files: [{ name: "image", external: { url: style.imageUrl } }]
+          };
+        }
+
+        // 2. 同時將原始資料（無論是短網址還是長 Base64）寫入文字備份欄位（例如叫 "款式圖片備份" 或自動尋找 rich_text 欄位）
+        const textImgKey = Object.keys(p).find(k => p[k]?.type === 'rich_text' && (k.includes('圖') || k.includes('image') || k.includes('備份')));
+        if (textImgKey) {
+          cProperties[textImgKey] = {
+            rich_text: [{ text: { content: style.imageUrl.substring(0, 2000) } }] // Notion text 也有上限但比 files 寬容，或可完整存
+          };
+        }
       }
 
       await notion.pages.create({

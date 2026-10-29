@@ -89,6 +89,24 @@ export default async function handler(req, res) {
               }
             });
 
+            // 2. 💡 雙軌保險：如果 files 抓不到（例如是放長 Base64 在文字欄位），改從 rich_text 欄位抓取
+            if (!imageUrl) {
+              Object.keys(p).forEach(k => {
+                const prop = p[k];
+                if (!prop) return;
+                const lowerK = k.toLowerCase();
+
+                if (prop.type === 'rich_text' && (lowerK.includes('款式圖片') || lowerK.includes('圖片') || lowerK.includes('備份'))) {
+                  if (prop.rich_text && Array.isArray(prop.rich_text) && prop.rich_text.length > 0) {
+                    const textVal = prop.rich_text.map(t => t?.plain_text || '').join('').trim();
+                    if (textVal) {
+                      imageUrl = textVal;
+                    }
+                  }
+                }
+              });
+            }
+
             if (imageUrl) {
               const cleanParent = (parentName || '').trim();
               const cleanStyle = (styleName || '').trim();

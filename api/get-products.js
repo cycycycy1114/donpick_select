@@ -207,6 +207,24 @@ export default async function handler(req, res) {
           }
         });
         
+        // 2. 如果 files 欄位完全沒有找到圖片，才去尋找 rich_text 文字備份欄位
+        if (imageUrls.length === 0) {
+          Object.keys(p).forEach(k => {
+            const prop = p[k];
+            if (!prop) return;
+
+            const lowerKey = k.toLowerCase();
+            if (prop.type === 'rich_text' && (lowerKey.includes('圖') || lowerKey.includes('image') || lowerKey.includes('備份'))) {
+              if (Array.isArray(prop.rich_text) && prop.rich_text.length > 0) {
+                const textVal = prop.rich_text.map(t => t?.plain_text || '').join('').trim();
+                if (textVal) {
+                  imageUrls.push(textVal);
+                }
+              }
+            }
+          });
+        }
+        
         const imageUrl = imageUrls.length > 0 ? imageUrls[0] : '';
         
         let saleType = '預購';
