@@ -14,6 +14,7 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
+      console.error("❌ 錯誤: 伺服器未設定 GEMINI_API_KEY");
       return res.status(500).json({ success: false, error: '後端未設定 GEMINI_API_KEY 環境變數' });
     }
 
@@ -22,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '缺少圖片資料' });
     }
 
-    // 透過 Google Gemini 官方 REST API 進行多模態呼叫
+    // 💡 修正：使用 gemini-2.5-flash 模型，並確保 API 網址與 payload 結構正確
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const apiResponse = await fetch(apiUrl, {
@@ -50,6 +51,7 @@ export default async function handler(req, res) {
     const result = await apiResponse.json();
     
     if (!apiResponse.ok) {
+      console.error("❌ Gemini API 錯誤回應:", JSON.stringify(result));
       throw new Error(result.error?.message || 'Gemini API 呼叫失敗');
     }
 
@@ -57,7 +59,7 @@ export default async function handler(req, res) {
     let text = candidate?.content?.parts?.[0]?.text || '';
     
     text = text.trim();
-    console.log("AI 原始回應:", text);
+    console.log("✨ AI 原始回應文字:", text);
 
     // 清除可能殘留的 markdown 標記
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
@@ -66,14 +68,14 @@ export default async function handler(req, res) {
     try {
       data = JSON.parse(text);
     } catch (parseErr) {
-      console.error("JSON 解析失敗，原始文字為:", text);
+      console.error("❌ JSON 解析失敗，AI 原始文字為:", text);
       return res.status(500).json({ success: false, error: 'AI 回傳格式錯誤，請再試一次' });
     }
 
     return res.status(200).json({ success: true, ...data });
 
   } catch (error) {
-    console.error("AI Vision Server Error:", error);
+    console.error("❌ AI Vision Server Error 完整例外:", error);
     return res.status(500).json({ success: false, error: error.message || String(error) });
   }
 }
