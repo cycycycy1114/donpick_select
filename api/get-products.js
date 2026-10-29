@@ -132,12 +132,30 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. 查詢 C 表 (款式明細表)
-    const cRes = await notion.databases.query({ database_id: productDetailDbId, page_size: 100 });
+    // 2. 查詢 C 表 (款式明細表) - 支援自動翻頁，突破 100 筆限制！
+    let allCResults = [];
+    let hasMore = true;
+    let startCursor = undefined;
+
+    while (hasMore) {
+      const queryParams = { database_id: productDetailDbId, page_size: 100 };
+      if (startCursor) {
+        queryParams.start_cursor = startCursor;
+      }
+      
+      const cRes = await notion.databases.query(queryParams);
+      if (cRes && cRes.results) {
+        allCResults = allCResults.concat(cRes.results);
+      }
+      
+      hasMore = cRes.has_more;
+      startCursor = cRes.next_cursor;
+    }
+
     const products = [];
 
-    if (cRes && cRes.results) {
-      cRes.results.forEach(page => {
+    if (allCResults.length > 0) {
+      allCResults.forEach(page => {
         const p = page?.properties || {};
 
         //款式名稱 (Title)
