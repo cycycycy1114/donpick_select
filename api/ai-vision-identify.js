@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       cleanBase64 = imageBase64.split('base64,')[1];
     }
 
-    // 💡 更新為官方指定的最新 gemini-3.8-flash 模型
+    // 💡 使用官方指定的最新 gemini-3.8-flash 模型
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
     const apiResponse = await fetch(apiUrl, {
@@ -46,10 +46,10 @@ export default async function handler(req, res) {
               {
                 text: `請幫我辨識這張照片中的所有商品與價格。
 規則：
-1. 請依照順序（例如從左到右、從上到下）為每個商品編號：A、B、C、D...。
-2. 品名部分請維持簡單的「代號-商品簡稱」（例如：A-托特包、B-御守）。
+1. 請依照順序（例如從左到右、從上到下）為每個商品依序編號：A、B、C、D...。
+2. 品名部分請維持簡單的「代號-商品簡稱」（例如：A-托特包、B-御守），讓代號清楚對應照片中的位置。
 3. 請仔細對應其價格，找不到價格請填 0。
-4. 請務必只回傳純 JSON 格式，結構必須為：{"items": [{"productName": "A-商品名", "price": 數字價格}]}`
+4. 請務必只回傳純 JSON 格式，結構必須嚴格為：{"items": [{"productName": "A-商品名", "price": 數字價格}]}`
               }
             ]
           }
@@ -68,12 +68,16 @@ export default async function handler(req, res) {
     let text = candidate?.content?.parts?.[0]?.text || '';
     
     text = text.trim();
+    console.log("✨ AI 原始回應文字:", text);
+
+    // 清除可能殘留的 Markdown 標記
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
     
     let data;
     try {
       data = JSON.parse(text);
     } catch (parseErr) {
+      // 💡 防呆機制：若 AI 多話，自動用正規表達式把 JSON 抓出來
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
