@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI();
+// 確保自動抓取環境變數中的 GEMINI_API_KEY
+const ai = new GoogleGenAI({});
 
 export const config = {
   api: {
@@ -21,6 +22,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '缺少圖片資料' });
     }
 
+    // 呼叫 Gemini 2.5 Flash 模型進行圖片辨識
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
@@ -31,13 +33,23 @@ export default async function handler(req, res) {
           }
         },
         {
-          text: '請幫我辨識這張照片中的所有商品與價格。請務必只回傳純 JSON 格式（絕對不要包含 markdown 標記如 ```json 或任何前後說明文字）：{"items": [{"productName": "商品名稱或編號", "price": 數字價格}, ...]}'
+          text: '請幫我辨識這張照片中的所有商品與價格。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "商品名稱或編號", "price": 數字價格},]}'
         }
       ]
     });
 
-    let text = response.text ? response.text.trim() : '';
-    console.log("AI 原始回應:", text); // 💡 可以去 Vercel Logs 看 AI 到底吐了什麼回來
+    // 取得 AI 回傳的文字內容
+    let text = '';
+    if (typeof response.text === 'function') {
+      text = response.text();
+    } else if (response.text) {
+      text = response.text;
+    } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+      text = response.candidates[0].content.parts[0].text;
+    }
+
+    text = text.trim();
+    console.log("AI 原始回應:", text);
 
     // 清除可能殘留的 markdown 標記
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
