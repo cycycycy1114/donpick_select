@@ -22,25 +22,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '沒有收到圖片資料' });
     }
 
-    // 將 Base64 轉回 Buffer 透過後端幫你傳到 Imgur（後端繞過 CORS 限制）
+    // 將 Base64 轉回 Buffer 透過後端傳到 telegra.ph 匿名圖床
     const buffer = Buffer.from(imageBase64, 'base64');
     const formData = new FormData();
-    formData.append('image', buffer, { filename: 'upload.jpg', contentType: mimeType || 'image/jpeg' });
+    formData.append('file', buffer, { filename: 'upload.jpg', contentType: mimeType || 'image/jpeg' });
 
-    const imgurRes = await fetch('https://api.imgur.com/3/image', {
+    const uploadRes = await fetch('https://telegra.ph/upload', {
       method: 'POST',
-      headers: {
-        Authorization: 'Client-ID 560248f76633fb6',
-        ...formData.getHeaders()
-      },
       body: formData
     });
 
-    const result = await imgurRes.json();
-    if (result.success) {
-      return res.status(200).json({ success: true, link: result.data.link });
+    const result = await uploadRes.json();
+    
+    // Telegraph 回傳格式為陣列，例如 [{ src: "/file/xxxx.jpg" }]
+    if (Array.isArray(result) && result[0]?.src) {
+      const fullLink = `https://telegra.ph${result[0].src}`;
+      return res.status(200).json({ success: true, link: fullLink });
+    } else if (result.error) {
+      throw new Error(result.error);
     } else {
-      throw new Error(result.data?.error?.message || 'Imgur 上傳失敗');
+      throw new Error('圖片上傳伺服器回應格式錯誤');
     }
 
   } catch (error) {

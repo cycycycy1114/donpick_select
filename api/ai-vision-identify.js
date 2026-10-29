@@ -14,7 +14,6 @@ export default async function handler(req, res) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error("❌ 錯誤: 伺服器未設定 GEMINI_API_KEY");
       return res.status(500).json({ success: false, error: '後端未設定 GEMINI_API_KEY 環境變數' });
     }
 
@@ -23,7 +22,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '缺少圖片資料' });
     }
 
-    // 💡 將模型名稱更新為官方最新的 gemini-3.8-flash
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
     const apiResponse = await fetch(apiUrl, {
@@ -40,7 +38,8 @@ export default async function handler(req, res) {
                 }
               },
               {
-                text: '請幫我辨識這張照片中的所有商品與價格。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "商品名稱或編號", "price": 數字價格}]}'
+                // 💡 升級提示詞：要求 AI 依照 A, B, C 或 1, 2, 3 編號，讓商品雜亂時也能清楚對應！
+                text: '請幫我辨識這張照片中的所有商品與價格。請為每個商品加上編號或代號（例如 A-商品名稱、B-商品名稱）。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "A-商品名稱或編號", "price": 數字價格}]}'
               }
             ]
           }
