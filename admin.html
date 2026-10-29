@@ -262,23 +262,23 @@
       };
     }
 
-// 📍 修改 admin.html 中的 handleAiShelfUpload 函式
+// 🤖 獨立的 AI 貨架照解析函式
 async function handleAiShelfUpload(fileInput) {
   const file = fileInput.files[0];
   if (!file) return;
 
   const statusEl = document.getElementById('aiStatus');
-  statusEl.innerText = '⏳ 正在透過 AI 解析貨架照，請稍候...';
+  statusEl.innerText = '⏳ AI 正在努力辨識商品與價格中，請稍候 (約需 3~6 秒)...';
 
   try {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     
     reader.onload = async function() {
-      const base64String = reader.result.split(',')[1];
+      const base64String = reader.result;
       const mimeType = file.type;
 
-      // 1. 先呼叫後端 AI 辨識商品清單
+      // 呼叫後端 AI 辨識 API
       const aiRes = await fetch('/api/ai-vision-identify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,32 +287,15 @@ async function handleAiShelfUpload(fileInput) {
       const aiData = await aiRes.json();
 
       if (aiData.success && aiData.items && aiData.items.length > 0) {
+        // 清空原本表格，把 AI 辨識出的 A、B、C 商品自動填入
         document.getElementById('stylesContainer').innerHTML = '';
         
-        // 2. 同時把這張貨架照上傳到 Telegraph 取得短網址，讓整張貨架照可以共用或填入
-        statusEl.innerText = '⏳ AI 解析成功，正在上傳圖片取得短網址...';
-        
-        let sharedImageUrl = '';
-        try {
-          const uploadRes = await fetch('/api/upload-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64String, mimeType })
-          });
-          const uploadData = await uploadRes.json();
-          if (uploadData.success) {
-            sharedImageUrl = uploadData.link; // 取得短網址！
-          }
-        } catch (e) {
-          console.log('自動上傳圖片失敗，略過圖片網址');
-        }
-
-        // 3. 將 AI 辨識出來的商品帶入表格，並帶入短網址（不是 Base64！）
         aiData.items.forEach(item => {
-          addStyleRow(item.productName, item.price, sharedImageUrl);
+          // 帶入 AI 產出的名稱與價格（圖片欄位保留讓您可以手動選取或上傳檔案）
+          addStyleRow(item.productName, item.price, '');
         });
 
-        statusEl.innerText = `🎉 AI 成功解析出 ${aiData.items.length} 個商品！已自動填入表格。`;
+        statusEl.innerText = `🎉 AI 成功解析出 ${aiData.items.length} 個商品！已自動填入下方表格。`;
       } else {
         throw new Error('AI 未能辨識出商品清單');
       }
