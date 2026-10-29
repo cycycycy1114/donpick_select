@@ -117,20 +117,31 @@ export default async function handler(req, res) {
         cProperties[cDateKey] = { date: { start: deadline } };
       }
       
-      // 💡 雙軌並存寫入邏輯
+      // 💡 整合 Notion 內建圖床寫入邏輯
       if (style.imageUrl) {
-        // 1. 如果有對應到檔案欄位，且是標準網址，嘗試寫入 Files 欄位
-        if (cFileKey && style.imageUrl.startsWith('http')) {
-          cProperties[cFileKey] = {
-            files: [{ name: "image", external: { url: style.imageUrl } }]
-          };
-        }
-
-        // 2. 如果有定義文字備份欄位，將原始資料（長 Base64 或網址）寫入 rich_text 備份
-        if (cTextImgKey) {
-          cProperties[cTextImgKey] = {
-            rich_text: [{ text: { content: style.imageUrl } }]
-          };
+        if (style.imageUrl.startsWith('http')) {
+          // 如果本來就是網址，直接用 external 寫入
+          if (cFileKey) {
+            cProperties[cFileKey] = {
+              files: [{ name: "image", external: { url: style.imageUrl } }]
+            };
+          }
+        } else {
+          // 如果是前端傳來的 Base64，透過 Notion 內建圖床上傳！
+          try {
+            // 假設前端有傳 mimeType，沒有的話預設 image/jpeg
+            const notionFileId = await uploadToNotionStorage(style.imageUrl, 'image/jpeg', `style_${createdCount}.jpg`);
+            if (notionFileId && cFileKey) {
+              cProperties[cFileKey] = {
+                files: [{
+                  type: "file_upload",
+                  file_upload: { id: notionFileId }
+                }]
+              };
+            }
+          } catch (uploadErr) {
+            console.error("Notion 內建圖床上傳失敗:", uploadErr);
+          }
         }
       }
 
@@ -147,4 +158,52 @@ export default async function handler(req, res) {
     console.error("Batch Create Error:", error);
     return res.status(500).json({ success: false, error: error.message || String(error) });
   }
+}
+
+// 💡 Notion 內建圖床上傳函式
+async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jpg') {
+  // 如果傳進來的是 http 外部網址，就不需要 Notion 內建上傳，直接回傳原網址
+  if (!imageBase64 || imageBase64.startsWith('http')) {
+    return null; 
+  }
+
+  // 如果是 Base64，把它轉成 Buffer
+  const buffer = Buffer.from(imageBase64, 'base64');
+
+  // 步驟 1: 向 Notion 申請建立檔案上傳通道
+  const createRes = await fetch('https://api.notion.com/v1/file_uploads', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      filename: filename,
+      content_type: mimeType || 'image/jpeg'
+    })
+  });
+  
+  const createData = await createRes.json();
+  if (!createData.id || !createData.upload_url) {
+    throw new Error('無法在 Notion 建立檔案通道: ' + JSON.stringify(createData));
+  }
+
+  // 步驟 2: 將圖片二進位資料上傳到 Notion 提供的暫存通道
+  const FormData = (await import('form-data')).default;
+  const form = new FormData();
+  form.append('file', buffer, { filename: filename, contentType: mimeType || 'image/jpeg' });
+
+  const uploadRes = await fetch(createData.upload_url, {
+    method: 'POST',
+    headers: form.getHeaders(),
+    body: form
+  });
+
+  if (!uploadRes.ok) {
+    throw new Error('上傳檔案內容至 Notion 失敗');
+  }
+
+  // 回傳 Notion 的 File Upload ID
+  return createData.id;
 }
