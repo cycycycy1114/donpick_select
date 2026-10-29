@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '沒有收到圖片資料' });
     }
 
-    // 安全包裝為前端可用的 Data URL，不寫入 GitHub 避免觸發 Vercel 部署
+    // 安全回傳 Data URL 供前端預覽與暫存，不寫入 GitHub 倉庫
     const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`;
 
     return res.status(200).json({ success: true, link: dataUrl });
