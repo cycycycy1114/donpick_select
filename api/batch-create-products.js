@@ -160,7 +160,7 @@ export default async function handler(req, res) {
   }
 }
 
-// 💡 修正後的 Notion 內建圖床上傳函式（已補上 headers 授權）
+// 💡 最終修正的 Notion 內建圖床上傳函式（同時補上 Token 與 Notion-Version）
 async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jpg') {
   if (!imageBase64 || imageBase64.startsWith('http')) {
     return null; 
@@ -193,7 +193,7 @@ async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jp
     throw new Error('無法在 Notion 建立檔案通道: ' + JSON.stringify(createData));
   }
 
-  // 步驟 2: 將圖片二進位資料透過 form-data 包裝，並補上 Authorization 授權標頭
+  // 步驟 2: 將圖片二進位資料透過 form-data 包裝，並補上完整的授權與版本標頭
   const FormData = (await import('form-data')).default;
   const form = new FormData();
   form.append('file', buffer, { filename: filename, contentType: mimeType || 'image/jpeg' });
@@ -201,8 +201,9 @@ async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jp
   // 取得 form-data 的預設 headers（包含 boundary）
   const headers = form.getHeaders();
   
-  // 💡 關鍵修正：將 Notion Token 補進上傳請求的 headers 裡
+  // 💡 補齊 Notion API 所需的授權與版本標頭
   headers['Authorization'] = `Bearer ${process.env.NOTION_TOKEN}`;
+  headers['Notion-Version'] = '2022-06-28';
 
   await new Promise((resolve, reject) => {
     form.submit({
