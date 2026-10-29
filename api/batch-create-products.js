@@ -103,7 +103,6 @@ export default async function handler(req, res) {
     let createdCount = 0;
     for (const style of styles) {
       const cProperties = {};
-      const p = page?.properties || {}; // 👈 必須確保這裡有宣告 p！
 
       if (cTitleKey) {
         cProperties[cTitleKey] = { title: [{ text: { content: style.styleName || '圖片款' } }] };
