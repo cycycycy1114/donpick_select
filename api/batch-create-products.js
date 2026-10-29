@@ -92,7 +92,7 @@ export default async function handler(req, res) {
         cProperties[cRelKey] = { relation: [{ id: parentPageId }] };
       }
       if (aDateKey && deadline) {
-        aProperties[aDateKey] = { date: { start: deadline } };
+        cProperties[aDateKey] = { date: { start: deadline } };
       }
       if (style.imageUrl && cFileKey) {
         cProperties[cFileKey] = {
