@@ -75,8 +75,8 @@ export default async function handler(req, res) {
     const cTitleKey = await getDbPropertyKey(productDetailDbId, ['款式名稱', 'Title', 'Name'], 'title');
     const cPriceKey = await getDbPropertyKey(productDetailDbId, ['單價'], 'number');
     const cRelKey = await getDbPropertyKey(productDetailDbId, ['商品名稱', 'relation'], 'relation');
-    const cFileKey = await getDbPropertyKey(productDetailDbId, ['圖', 'image', 'file'], 'files');
-    const aDateKey = await getDbPropertyKey(productDbId, ['收單', '截止', '日期', 'date'], 'date');
+    const cFileKey = await getDbPropertyKey(productDetailDbId, ['款式圖片', 'image', 'file'], 'files');
+    const aDateKey = await getDbPropertyKey(productDbId, ['收單時間', 'date'], 'date');
 
     let createdCount = 0;
     for (const style of styles) {
