@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     let cRelKey = null;
     let cFileKey = null;
     let cDateKey = null;
+    let cTextImgKey = null;
 
     for (const key of Object.keys(detailProps)) {
       const prop = detailProps[key];
