@@ -1,8 +1,8 @@
 {
-"name": "donpick-shop",
+  "name": "donpick",
   "version": "1.0.0",
-  "type": "module",
   "dependencies": {
-    "@notionhq/client": "^2.2.3"
+    "@google/genai": "^0.1.1",
+    "@notionhq/client": "^2.2.15"
   }
 }
