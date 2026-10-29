@@ -160,7 +160,7 @@ export default async function handler(req, res) {
   }
 }
 
-// 💡 修正後的 Notion 內建圖床上傳函式
+// 💡 修正後的 Notion 內建圖床上傳函式（採用極度穩定的 Buffer 與 FormData 轉換）
 async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jpg') {
   if (!imageBase64 || imageBase64.startsWith('http')) {
     return null; 
@@ -193,24 +193,32 @@ async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jp
     throw new Error('無法在 Notion 建立檔案通道: ' + JSON.stringify(createData));
   }
 
-  // 步驟 2: 將圖片二進位資料打包成 multipart/form-data
+  // 步驟 2: 將圖片二進位資料透過 form-data 包裝，並使用 Promise 確保請求完整送出
   const FormData = (await import('form-data')).default;
   const form = new FormData();
   form.append('file', buffer, { filename: filename, contentType: mimeType || 'image/jpeg' });
 
-  // 💡 關鍵修正：將 form-data 產生的 headers（包含正確的 boundary）帶入請求
-  const uploadRes = await fetch(createData.upload_url, {
-    method: 'POST',
-    headers: {
-      ...form.getHeaders()
-    },
-    body: form
+  // 透過 Promise 將 form-data 轉為標準 fetch 請求，解決 boundary 報錯問題
+  await new Promise((resolve, reject) => {
+    form.submit({
+      protocol: new URL(createData.upload_url).protocol,
+      host: new URL(createData.upload_url).host,
+      path: new URL(createData.upload_url).pathname + new URL(createData.upload_url).search,
+      headers: form.getHeaders(),
+    }, (err, res) => {
+      if (err) return reject(err);
+      
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(data);
+        } else {
+          reject(new Error(`上傳至 Notion 失敗 (HTTP ${res.statusCode}): ${data}`));
+        }
+      });
+    });
   });
-
-  if (!uploadRes.ok) {
-    const errText = await uploadRes.text();
-    throw new Error(`上傳檔案內容至 Notion 失敗: ${errText}`);
-  }
 
   // 回傳 Notion 的 File Upload ID
   return createData.id;
