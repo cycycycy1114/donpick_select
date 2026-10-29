@@ -287,25 +287,43 @@ async function handleAiShelfUpload(fileInput) {
     
     reader.onload = async function() {
       const base64String = reader.result.split(',')[1];
-      const dataUrl = reader.result; // 這是可以直接用的圖片預覽/Notion 格式
+      const mimeType = file.type;
 
-      // 呼叫後端 AI 辨識 API，直接傳送 Base64
+      // 1. 先呼叫後端 AI 辨識商品清單
       const aiRes = await fetch('/api/ai-vision-identify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64String, mimeType: file.type })
+        body: JSON.stringify({ imageBase64: base64String, mimeType })
       });
       const aiData = await aiRes.json();
 
       if (aiData.success && aiData.items && aiData.items.length > 0) {
         document.getElementById('stylesContainer').innerHTML = '';
         
-        // 將 AI 辨識出來的商品帶入表格，並賦予這張圖片的 Data URL
+        // 2. 同時把這張貨架照上傳到 Telegraph 取得短網址，讓整張貨架照可以共用或填入
+        statusEl.innerText = '⏳ AI 解析成功，正在上傳圖片取得短網址...';
+        
+        let sharedImageUrl = '';
+        try {
+          const uploadRes = await fetch('/api/upload-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64: base64String, mimeType })
+          });
+          const uploadData = await uploadRes.json();
+          if (uploadData.success) {
+            sharedImageUrl = uploadData.link; // 取得短網址！
+          }
+        } catch (e) {
+          console.log('自動上傳圖片失敗，略過圖片網址');
+        }
+
+        // 3. 將 AI 辨識出來的商品帶入表格，並帶入短網址（不是 Base64！）
         aiData.items.forEach(item => {
-          addStyleRow(item.productName, item.price, dataUrl);
+          addStyleRow(item.productName, item.price, sharedImageUrl);
         });
 
-        statusEl.innerText = `🎉 AI 成功解析出 ${aiData.items.length} 個商品！已自動填入下方表格。`;
+        statusEl.innerText = `🎉 AI 成功解析出 ${aiData.items.length} 個商品！已自動填入表格。`;
       } else {
         throw new Error('AI 未能辨識出商品清單');
       }
