@@ -1,6 +1,7 @@
 {
   "git": {
     "deploymentEnabled": true
+    "ignoredFiles": ["uploads/**"]
   }
 }
 
