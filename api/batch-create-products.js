@@ -48,7 +48,6 @@ export default async function handler(req, res) {
     if (productDbId) {
       const aTitleKey = await getDbPropertyKey(productDbId, ['商品', '名稱', '標題', 'Name'], 'title');
       const aCatKey = await getDbPropertyKey(productDbId, ['分類', '地區', 'category'], null);
-      const aDateKey = await getDbPropertyKey(productDbId, ['收單', '截止', '日期', 'date'], 'date');
 
       const aProperties = {};
       if (aTitleKey) {
@@ -64,9 +63,6 @@ export default async function handler(req, res) {
           aProperties[aCatKey] = { rich_text: [{ text: { content: category } }] };
         }
       }
-      if (aDateKey && deadline) {
-        aProperties[aDateKey] = { date: { start: deadline } };
-      }
 
       const parentRes = await notion.pages.create({
         parent: { database_id: productDbId },
@@ -76,10 +72,11 @@ export default async function handler(req, res) {
     }
 
     // 2. 動態取得 C 表 (款式明細表) 的正確欄位名稱
-    const cTitleKey = await getDbPropertyKey(productDetailDbId, ['款式', '名稱', '品名', 'Title', 'Name'], 'title');
-    const cPriceKey = await getDbPropertyKey(productDetailDbId, ['價', 'price', 'NT', '金額'], 'number');
-    const cRelKey = await getDbPropertyKey(productDetailDbId, ['商品', '主商品', 'relation'], 'relation');
+    const cTitleKey = await getDbPropertyKey(productDetailDbId, ['款式名稱', 'Title', 'Name'], 'title');
+    const cPriceKey = await getDbPropertyKey(productDetailDbId, ['單價'], 'number');
+    const cRelKey = await getDbPropertyKey(productDetailDbId, ['商品名稱', 'relation'], 'relation');
     const cFileKey = await getDbPropertyKey(productDetailDbId, ['圖', 'image', 'file'], 'files');
+    const aDateKey = await getDbPropertyKey(productDbId, ['收單', '截止', '日期', 'date'], 'date');
 
     let createdCount = 0;
     for (const style of styles) {
@@ -93,6 +90,9 @@ export default async function handler(req, res) {
       }
       if (parentPageId && cRelKey) {
         cProperties[cRelKey] = { relation: [{ id: parentPageId }] };
+      }
+      if (aDateKey && deadline) {
+        aProperties[aDateKey] = { date: { start: deadline } };
       }
       if (style.imageUrl && cFileKey) {
         cProperties[cFileKey] = {
