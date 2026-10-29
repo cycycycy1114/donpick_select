@@ -160,19 +160,18 @@ export default async function handler(req, res) {
   }
 }
 
-// 💡 Notion 內建圖床上傳函式（已加強 Base64 前綴清洗防呆）
+// 💡 修正後的 Notion 內建圖床上傳函式
 async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jpg') {
   if (!imageBase64 || imageBase64.startsWith('http')) {
     return null; 
   }
 
-  // 🧹 防呆：如果字串包含 data:image/...;base64, 必須先把它切掉，只留純 Base64
+  // 清除 Base64 前綴
   let cleanBase64 = imageBase64;
   if (imageBase64.includes('base64,')) {
     cleanBase64 = imageBase64.split('base64,')[1];
   }
 
-  // 將純 Base64 轉成 Buffer
   const buffer = Buffer.from(cleanBase64, 'base64');
 
   // 步驟 1: 向 Notion 申請建立檔案上傳通道
@@ -194,14 +193,17 @@ async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jp
     throw new Error('無法在 Notion 建立檔案通道: ' + JSON.stringify(createData));
   }
 
-  // 步驟 2: 將圖片二進位資料上傳到 Notion 提供的暫存通道
+  // 步驟 2: 將圖片二進位資料打包成 multipart/form-data
   const FormData = (await import('form-data')).default;
   const form = new FormData();
   form.append('file', buffer, { filename: filename, contentType: mimeType || 'image/jpeg' });
 
+  // 💡 關鍵修正：將 form-data 產生的 headers（包含正確的 boundary）帶入請求
   const uploadRes = await fetch(createData.upload_url, {
     method: 'POST',
-    headers: form.getHeaders(),
+    headers: {
+      ...form.getHeaders()
+    },
     body: form
   });
 
