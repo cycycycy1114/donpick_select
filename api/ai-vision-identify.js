@@ -1,8 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
-
-// 確保自動抓取環境變數中的 GEMINI_API_KEY
-const ai = new GoogleGenAI({});
-
 export const config = {
   api: {
     bodyParser: { sizeLimit: '10mb' },
@@ -17,37 +12,50 @@ export default async function handler(req, res) {
   }
 
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ success: false, error: '後端未設定 GEMINI_API_KEY 環境變數' });
+    }
+
     const { imageBase64, mimeType } = req.body;
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: '缺少圖片資料' });
     }
 
-    // 呼叫 Gemini 2.5 Flash 模型進行圖片辨識
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          inlineData: {
-            data: imageBase64,
-            mimeType: mimeType || 'image/jpeg'
+    // 透過 Google Gemini 官方 REST API 進行多模態呼叫
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+    const apiResponse = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                inline_data: {
+                  mime_type: mimeType || 'image/jpeg',
+                  data: imageBase64
+                }
+              },
+              {
+                text: '請幫我辨識這張照片中的所有商品與價格。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "商品名稱或編號", "price": 數字價格}]}'
+              }
+            ]
           }
-        },
-        {
-          text: '請幫我辨識這張照片中的所有商品與價格。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "商品名稱或編號", "price": 數字價格},]}'
-        }
-      ]
+        ]
+      })
     });
 
-    // 取得 AI 回傳的文字內容
-    let text = '';
-    if (typeof response.text === 'function') {
-      text = response.text();
-    } else if (response.text) {
-      text = response.text;
-    } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
-      text = response.candidates[0].content.parts[0].text;
+    const result = await apiResponse.json();
+    
+    if (!apiResponse.ok) {
+      throw new Error(result.error?.message || 'Gemini API 呼叫失敗');
     }
 
+    const candidate = result.candidates?.[0];
+    let text = candidate?.content?.parts?.[0]?.text || '';
+    
     text = text.trim();
     console.log("AI 原始回應:", text);
 
