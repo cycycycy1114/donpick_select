@@ -4,6 +4,38 @@ export const config = {
   },
 };
 
+async function callGemini(apiKey, modelName, imageBase64, mimeType) {
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              inline_data: {
+                mime_type: mimeType || 'image/jpeg',
+                data: imageBase64
+              }
+            },
+            {
+              text: '請幫我辨識這張照片中的所有商品與價格。請為每個商品加上編號或代號（例如 A-商品名稱、B-商品名稱）。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "A-商品名稱或編號", "price": 數字價格}]}'
+            }
+          ]
+        }
+      ]
+    })
+  });
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error?.message || `Model ${modelName} failed`);
+  }
+  return result;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
@@ -22,36 +54,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '缺少圖片資料' });
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+    // 💡 智慧模型切換清單：優先使用 3.8-flash，如果遇到高負載則自動改用備份模型
+    const modelsToTry = ['gemini-3.8-flash', 'gemini-1.5-flash'];
+    let result = null;
+    let lastError = null;
 
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                inline_data: {
-                  mime_type: mimeType || 'image/jpeg',
-                  data: imageBase64
-                }
-              },
-              {
-                // 💡 升級提示詞：要求 AI 依照 A, B, C 或 1, 2, 3 編號，讓商品雜亂時也能清楚對應！
-                text: '請幫我辨識這張照片中的所有商品與價格。請為每個商品加上編號或代號（例如 A-商品名稱、B-商品名稱）。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "A-商品名稱或編號", "price": 數字價格}]}'
-              }
-            ]
-          }
-        ]
-      })
-    });
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`⏳ 正在嘗試使用模型: ${modelName}`);
+        result = await callGemini(apiKey, modelName, imageBase64, mimeType);
+        break; // 成功就跳出迴圈
+      } catch (err) {
+        console.warn(`⚠️ 模型 ${modelName} 呼叫失敗:`, err.message);
+        lastError = err;
+      }
+    }
 
-    const result = await apiResponse.json();
-    
-    if (!apiResponse.ok) {
-      console.error("❌ Gemini API 錯誤回應:", JSON.stringify(result));
-      throw new Error(result.error?.message || 'Gemini API 呼叫失敗');
+    if (!result) {
+      throw lastError || new Error('所有 AI 模型目前皆無法回應，請稍後再試');
     }
 
     const candidate = result.candidates?.[0];
