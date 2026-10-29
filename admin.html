@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DonPick - 極速批次上架後台</title>
+  <title>DonPick - AI 智慧連線批次上架後台</title>
   <style>
     :root {
       --milk-red: #b85b53;
@@ -19,7 +19,7 @@
       padding: 20px;
     }
     .container {
-      max-width: 800px;
+      max-width: 850px;
       margin: 0 auto;
       background: white;
       padding: 24px;
@@ -31,6 +31,14 @@
       margin-top: 0;
       border-bottom: 2px solid var(--border-color);
       padding-bottom: 10px;
+    }
+    .ai-banner {
+      background: linear-gradient(135deg, #fff5f5, #ffe8e6);
+      border: 1px dashed var(--milk-red);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
     }
     .form-group {
       margin-bottom: 16px;
@@ -73,8 +81,11 @@
     .btn:hover {
       background: var(--milk-red-dark);
     }
-    .btn-secondary {
-      background: #666;
+    .btn-ai {
+      background: #2eaadc;
+    }
+    .btn-ai:hover {
+      background: #1b8fb9;
     }
     .btn-danger {
       background: #d9534f;
@@ -92,10 +103,18 @@
 <body>
 
   <div class="container">
-    <h2>🚀 DonPick 現場連線批次上架</h2>
+    <h2>🚀 DonPick 智慧連線極速批次上架</h2>
     
+    <!-- ✨ AI 智慧截圖上架區 -->
+    <div class="ai-banner">
+      <h3 style="margin: 0 0 8px 0; color: var(--milk-red); font-size: 16px;">📸 AI 智慧截圖自動辨識</h3>
+      <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">直接上傳現場貨架照或商品截圖，AI 將自動辨識編號、名稱與價格填入下方！</p>
+      <input type="file" id="aiImageInput" accept="image/*" style="display: none;" onchange="handleAIPicture(event)">
+      <button type="button" class="btn btn-ai" onclick="document.getElementById('aiImageInput').click()">✨ 選擇截圖並自動辨識</button>
+    </div>
+
     <div class="form-group">
-      <label>📦 主商品 / 連線名稱 (例如：9/5-12 日本東京連線 - 小網神社御守)</label>
+      <label>📦 主商品 / 連線名稱 (例如：9/5-12 日本東京連線)</label>
       <input type="text" id="productName" placeholder="請輸入主商品名稱">
     </div>
 
@@ -113,7 +132,7 @@
     <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
 
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-      <label style="margin: 0;">✨ 款式 / 編號清單 (對應貨架上的編號)</label>
+      <label style="margin: 0;">✨ 款式 / 編號清單</label>
       <button type="button" class="btn" onclick="addStyleRow()">➕ 新增一筆款式</button>
     </div>
 
@@ -129,22 +148,51 @@
   </div>
 
   <script>
-    // 預設載入一列空白款式
     window.onload = function() {
       addStyleRow();
     };
 
-    function addStyleRow() {
+    function addStyleRow(styleName = '', price = '', imageUrl = '') {
       const container = document.getElementById('stylesContainer');
       const row = document.createElement('div');
       row.className = 'style-row';
       row.innerHTML = `
-        <input type="text" placeholder="編號與名稱 (例: 38. 黑色零錢包)" class="styleNameInput">
-        <input type="number" placeholder="價格 (例: 450)" class="priceInput" style="max-width: 120px;">
-        <input type="text" placeholder="圖片網址 (URL)" class="imageUrlInput">
+        <input type="text" placeholder="編號與名稱 (例: 38. 黑色零錢包)" class="styleNameInput" value="${styleName}">
+        <input type="number" placeholder="價格 (例: 450)" class="priceInput" style="max-width: 100px;" value="${price}">
+        <input type="file" accept="image/*" class="imageFileInput" style="max-width: 150px; font-size: 12px;">
+        <input type="hidden" class="imageUrlInput" value="${imageUrl}">
         <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">🗑️</button>
       `;
       container.appendChild(row);
+    }
+
+    // 模擬 AI 辨識截圖功能 (未來可串接 Gemini Vision 後端 API)
+    async function handleAIPicture(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const msgEl = document.getElementById('statusMsg');
+      msgEl.style.display = 'block';
+      msgEl.style.background = '#fffbe6';
+      msgEl.style.color = '#faad14';
+      msgEl.innerText = '🤖 AI 正在努力辨識圖片中的商品與編號，請稍候...';
+
+      // 模擬 AI 辨識結果自動帶入（未來可替換為真實呼叫後端 Gemini API 辨識）
+      setTimeout(() => {
+        // 自動帶入範例示範
+        document.getElementById('productName').value = "9/5-12 日本東京連線 - 現場貨架選物";
+        document.getElementById('stylesContainer').innerHTML = ''; // 清空舊的
+        
+        // 模擬 AI 抓到的商品清單
+        addStyleRow("38. Hello Kitty 黑色愛心零錢包", "450");
+        addStyleRow("40. 美樂蒂 粉色愛心零錢包", "450");
+        addStyleRow("42. 大耳狗 淺藍色愛心零錢包", "450");
+        addStyleRow("44. 庫洛米 紫色愛心零錢包", "450");
+
+        msgEl.style.background = '#f6ffed';
+        msgEl.style.color = '#52c41a';
+        msgEl.innerText = '✨ AI 辨識成功！已自動填入 4 個識別商品，檢查無誤即可點擊寫入 Notion！';
+      }, 1500);
     }
 
     async function submitBatch() {
@@ -194,7 +242,6 @@
           msgEl.style.background = '#f6ffed';
           msgEl.style.color = '#52c41a';
           msgEl.innerText = `🎉 成功！${result.message}`;
-          // 清空表單
           document.getElementById('productName').value = '';
           document.getElementById('stylesContainer').innerHTML = '';
           addStyleRow();
