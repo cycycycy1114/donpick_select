@@ -1,3 +1,6 @@
+import fetch from 'node-fetch';
+import FormData from 'form-data';
+
 export const config = {
   api: {
     bodyParser: {
@@ -19,10 +22,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '沒有收到圖片資料' });
     }
 
-    // 安全回傳 Data URL 供前端預覽與暫存，不寫入 GitHub 倉庫
-    const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`;
+    const buffer = Buffer.from(imageBase64, 'base64');
+    const formData = new FormData();
+    // Catbox API 規格：reqtype='fileupload', fileToUpload=檔案
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', buffer, { filename: 'upload.jpg', contentType: mimeType || 'image/jpeg' });
 
-    return res.status(200).json({ success: true, link: dataUrl });
+    const uploadRes = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST',
+      body: formData
+    });
+
+    const link = await uploadRes.text();
+    
+    // Catbox 成功時會直接回傳一個完整的網址字串
+    if (link && link.startsWith('http')) {
+      return res.status(200).json({ success: true, link: link.trim() });
+    } else {
+      throw new Error(link || 'Catbox 上傳失敗');
+    }
 
   } catch (error) {
     console.error("Upload Error:", error);
