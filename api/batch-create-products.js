@@ -15,52 +15,75 @@ export default async function handler(req, res) {
     const productDetailDbId = process.env.PRODUCT_DETAIL_DB_ID;
 
     if (!productDetailDbId) {
-      return res.status(500).json({ success: false, error: '¦øªA¾¹¥¼³]©w PRODUCT_DETAIL_DB_ID' });
+      return res.status(500).json({ success: false, error: 'ä¼ºæœå™¨æœªè¨­å®š PRODUCT_DETAIL_DB_ID' });
     }
 
     if (!productName || !styles || !Array.isArray(styles) || styles.length === 0) {
-      return res.status(400).json({ success: false, error: '½Ğ´£¨Ñ¥D°Ó«~¦WºÙ»P¦Ü¤Ö¤@­Ó´Ú¦¡¸ê®Æ' });
+      return res.status(400).json({ success: false, error: 'è«‹æä¾›ä¸»å•†å“åç¨±èˆ‡è‡³å°‘ä¸€å€‹æ¬¾å¼è³‡æ–™' });
     }
 
-    // »²§U¨ç¦¡¡G¦Û°Ê´M§ä Notion ¸ê®Æ®w¤¤²Å¦XÃöÁä¦rªºÄæ¦ì¦WºÙ
-    async function getDbPropertyKey(dbId, keywords, expectedType) {
-      const db = await notion.databases.retrieve({ database_id: dbId });
-      const props = db.properties;
-      for (const key of Object.keys(props)) {
-        const prop = props[key];
-        const matchName = keywords.some(kw => key.includes(kw));
-        const matchType = !expectedType || prop.type === expectedType || (expectedType === 'title' && prop.type === 'title');
-        if (matchName && matchType) {
-          return key;
-        }
+    // å–å¾— C è¡¨èˆ‡ A è¡¨çš„è³‡æ–™åº«çµæ§‹
+    const detailDb = await notion.databases.retrieve({ database_id: productDetailDbId });
+    const detailProps = detailDb.properties;
+
+    // ğŸ’¡ å°å‡º Notion å¯¦éš›æ¬„ä½åç¨±ï¼Œæ–¹ä¾¿ä½ åœ¨ Vercel Logs è£¡æ ¸å°ï¼
+    console.log("Cè¡¨æ‰€æœ‰æ¬„ä½åç¨±:", Object.keys(detailProps));
+
+    // ğŸ¯ ç²¾æº–å°‹æ‰¾ C è¡¨æ¬„ä½ï¼ˆä¸å…è¨±æ¨¡ç³Šäº‚çŒœï¼Œå¿…é ˆåç¨±ç›¸ç¬¦æˆ–ç¬¦åˆç‰¹å®šæ¢ä»¶ï¼‰
+    let cTitleKey = null;
+    let cPriceKey = null;
+    let cRelKey = null;
+    let cFileKey = null;
+    let cDateKey = null;
+
+    for (const key of Object.keys(detailProps)) {
+      const prop = detailProps[key];
+      // æ¨™é¡Œ (Title)
+      if (prop.type === 'title') cTitleKey = key;
+      // å–®åƒ¹ / åƒ¹æ ¼ (Number) - åš´æ ¼æ’é™¤åŒ¯ç‡
+      if (prop.type === 'number' && (key.includes('å–®åƒ¹') || key.includes('åƒ¹æ ¼') || key.includes('NT') || key.includes('å”®åƒ¹')) && !key.includes('åŒ¯') && !key.includes('ç‡')) {
+        cPriceKey = key;
       }
-      // ¦pªG§ä¤£¨ì²Å¦XÃöÁä¦rªº¡A´N§ä²Ä¤@­Ó²Å¦XÃş«¬ªºÄæ¦ì
-      for (const key of Object.keys(props)) {
-        if (!expectedType || props[key].type === expectedType) {
-          return key;
-        }
+      // é—œè¯ (Relation)
+      if (prop.type === 'relation') cRelKey = key;
+      // åœ–ç‰‡ / æª”æ¡ˆ (Files)
+      if (prop.type === 'files' && (key.includes('åœ–') || key.includes('image') || key.includes('file') || key.includes('ç›¸ç‰‡'))) {
+        cFileKey = key;
       }
-      return null;
+      // æ”¶å–®æ™‚é–“ (Date)
+      if (prop.type === 'date' && (key.includes('æ”¶å–®') || key.includes('æˆªæ­¢') || key.includes('æ—¥æœŸ'))) {
+        cDateKey = key;
+      }
     }
 
-    // 1. °ÊºA¨ú±o A ªí (¥D°Ó«~ªí) ªº¥¿½TÄæ¦ì¦WºÙ
+    // å¦‚æœé‚„æ˜¯æ‰¾ä¸åˆ°åƒ¹æ ¼ï¼Œé€€è€Œæ±‚å…¶æ¬¡æŠ“ç¬¬ä¸€å€‹ä¸æ˜¯åŒ¯ç‡çš„æ•¸å­—æ¬„ä½
+    if (!cPriceKey) {
+      cPriceKey = Object.keys(detailProps).find(k => detailProps[k].type === 'number' && !k.includes('åŒ¯') && !k.includes('ç‡'));
+    }
+    // å¦‚æœæ‰¾ä¸åˆ°åœ–ç‰‡æ¬„ä½ï¼ŒæŠ“ç¬¬ä¸€å€‹ files æ¬„ä½
+    if (!cFileKey) {
+      cFileKey = Object.keys(detailProps).find(k => detailProps[k].type === 'files');
+    }
+
+    console.log(`æ¬„ä½å°æ‡‰çµæœ -> æ¨™é¡Œ: ${cTitleKey}, åƒ¹æ ¼: ${cPriceKey}, é—œè¯: ${cRelKey}, åœ–ç‰‡: ${cFileKey}, æ—¥æœŸ: ${cDateKey}`);
+
+    // 1. å»ºç«‹ A è¡¨ (ä¸»å•†å“è¡¨)
     let parentPageId = null;
     if (productDbId) {
-      const aTitleKey = await getDbPropertyKey(productDbId, ['°Ó«~', '¦WºÙ', '¼ĞÃD', 'Name'], 'title');
-      const aCatKey = await getDbPropertyKey(productDbId, ['¤ÀÃş', '¦a°Ï', 'category'], null);
+      const mainDb = await notion.databases.retrieve({ database_id: productDbId });
+      const mainProps = mainDb.properties;
+      const aTitleKey = Object.keys(mainProps).find(k => mainProps[k].type === 'title');
+      const aCatKey = Object.keys(mainProps).find(k => mainProps[k].type === 'select' || mainProps[k].type === 'multi_select');
 
       const aProperties = {};
       if (aTitleKey) {
         aProperties[aTitleKey] = { title: [{ text: { content: productName } }] };
       }
       if (aCatKey && category) {
-        const catPropType = (await notion.databases.retrieve({ database_id: productDbId })).properties[aCatKey].type;
-        if (catPropType === 'select') {
+        if (mainProps[aCatKey].type === 'select') {
           aProperties[aCatKey] = { select: { name: category } };
-        } else if (catPropType === 'multi_select') {
+        } else if (mainProps[aCatKey].type === 'multi_select') {
           aProperties[aCatKey] = { multi_select: [{ name: category }] };
-        } else if (catPropType === 'rich_text') {
-          aProperties[aCatKey] = { rich_text: [{ text: { content: category } }] };
         }
       }
 
@@ -71,19 +94,13 @@ export default async function handler(req, res) {
       parentPageId = parentRes.id;
     }
 
-    // 2. °ÊºA¨ú±o C ªí (´Ú¦¡©ú²Óªí) ªº¥¿½TÄæ¦ì¦WºÙ
-    const cTitleKey = await getDbPropertyKey(productDetailDbId, ['´Ú¦¡¦WºÙ', 'Title', 'Name'], 'title');
-    const cPriceKey = await getDbPropertyKey(productDetailDbId, ['³æ»ù'], 'number');
-    const cRelKey = await getDbPropertyKey(productDetailDbId, ['°Ó«~¦WºÙ', 'relation'], 'relation');
-    const cFileKey = await getDbPropertyKey(productDetailDbId, ['´Ú¦¡¹Ï¤ù', 'image', 'file'], 'files');
-    const aDateKey = await getDbPropertyKey(productDetailDbId, ['¦¬³æ®É¶¡', 'date'], 'date');
-
+    // 2. å»ºç«‹ C è¡¨æ¬¾å¼æ˜ç´°
     let createdCount = 0;
     for (const style of styles) {
       const cProperties = {};
 
       if (cTitleKey) {
-        cProperties[cTitleKey] = { title: [{ text: { content: style.styleName || '¹Ï¤ù´Ú' } }] };
+        cProperties[cTitleKey] = { title: [{ text: { content: style.styleName || 'åœ–ç‰‡æ¬¾' } }] };
       }
       if (cPriceKey) {
         cProperties[cPriceKey] = { number: Number(style.price) || 0 };
@@ -91,9 +108,11 @@ export default async function handler(req, res) {
       if (parentPageId && cRelKey) {
         cProperties[cRelKey] = { relation: [{ id: parentPageId }] };
       }
-      if (aDateKey && deadline) {
-        cProperties[aDateKey] = { date: { start: deadline } };
+      if (cDateKey && deadline) {
+        cProperties[cDateKey] = { date: { start: deadline } };
       }
+      
+      // è™•ç†åœ–ç‰‡ç¶²å€
       if (style.imageUrl && cFileKey) {
         cProperties[cFileKey] = {
           files: [{ name: "image", external: { url: style.imageUrl } }]
@@ -107,7 +126,7 @@ export default async function handler(req, res) {
       createdCount++;
     }
 
-    return res.status(200).json({ success: true, message: `¦¨¥\§å¦¸«Ø¥ß ${createdCount} ­Ó´Ú¦¡¡I` });
+    return res.status(200).json({ success: true, message: `æˆåŠŸå»ºç«‹ä¸»å•†å“ä¸¦æ‰¹æ¬¡å¯«å…¥ ${createdCount} å€‹æ¬¾å¼ï¼` });
 
   } catch (error) {
     console.error("Batch Create Error:", error);
