@@ -4,6 +4,52 @@ export const config = {
   },
 };
 
+// 支援逾時保護的 fetch 函式（避免 ECONNRESET 卡死）
+async function fetchWithTimeout(url, options, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return response;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+async function callGemini(apiKey, modelName, imageBase64, mimeType) {
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  const response = await fetchWithTimeout(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              inline_data: {
+                mime_type: mimeType || 'image/jpeg',
+                data: imageBase64
+              }
+            },
+            {
+              text: '請幫我辨識這張照片中的所有商品與價格。請為每個商品加上編號或代號（例如 A-商品名稱、B-商品名稱）。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "A-商品名稱或編號", "price": 數字價格}]}'
+            }
+          ]
+        }
+      ]
+    })
+  }, 15000); // 15 秒逾時
+
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.error?.message || `Model ${modelName} failed`);
+  }
+  return result;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
@@ -22,44 +68,29 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '缺少圖片資料' });
     }
 
-    // 💡 使用 Google 官方指定的最新 gemini-3.8-flash 模型
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+    const modelsToTry = ['gemini-3.8-flash', 'gemini-2.0-flash'];
+    let result = null;
+    let lastError = null;
 
-    const apiResponse = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                inline_data: {
-                  mime_type: mimeType || 'image/jpeg',
-                  data: imageBase64
-                }
-              },
-              {
-                text: '請幫我辨識這張照片中的所有商品與價格。請為每個商品加上編號或代號（例如 A-商品名稱、B-商品名稱）。請務必只回傳純 JSON 格式（絕對不要包含任何 markdown 標記如 ```json，也不要有多餘的前後文字）：{"items": [{"productName": "A-商品名稱或編號", "price": 數字價格}]}'
-              }
-            ]
-          }
-        ]
-      })
-    });
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`⏳ 正在嘗試使用模型: ${modelName}`);
+        result = await callGemini(apiKey, modelName, imageBase64, mimeType);
+        break;
+      } catch (err) {
+        console.warn(`⚠️ 模型 ${modelName} 呼叫失敗:`, err.message);
+        lastError = err;
+      }
+    }
 
-    const result = await apiResponse.json();
-    
-    if (!apiResponse.ok) {
-      console.error("❌ Gemini API 錯誤回應:", JSON.stringify(result));
-      throw new Error(result.error?.message || 'Gemini API 呼叫失敗');
+    if (!result) {
+      throw lastError || new Error('連線逾時或 AI 伺服器忙碌中，請重新嘗試');
     }
 
     const candidate = result.candidates?.[0];
     let text = candidate?.content?.parts?.[0]?.text || '';
     
     text = text.trim();
-    console.log("✨ AI 原始回應文字:", text);
-
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
     
     let data;
