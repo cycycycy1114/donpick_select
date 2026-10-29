@@ -54,8 +54,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '缺少圖片資料' });
     }
 
-    // 💡 智慧模型切換清單：優先使用 3.8-flash，如果遇到高負載則自動改用備份模型
-    const modelsToTry = ['gemini-3.8-flash', 'gemini-1.5-flash'];
+    // 💡 更新為 Google 官方 v1beta 穩定支援的 Flash 模型名稱
+    const modelsToTry = ['gemini-2.0-flash', 'gemini-2.5-flash'];
     let result = null;
     let lastError = null;
 
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       try {
         console.log(`⏳ 正在嘗試使用模型: ${modelName}`);
         result = await callGemini(apiKey, modelName, imageBase64, mimeType);
-        break; // 成功就跳出迴圈
+        break;
       } catch (err) {
         console.warn(`⚠️ 模型 ${modelName} 呼叫失敗:`, err.message);
         lastError = err;
@@ -80,7 +80,6 @@ export default async function handler(req, res) {
     text = text.trim();
     console.log("✨ AI 原始回應文字:", text);
 
-    // 清除可能殘留的 markdown 標記
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
     
     let data;

@@ -4,7 +4,7 @@ import FormData from 'form-data';
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '10mb', // 允許手機大張照片上傳
+      sizeLimit: '10mb',
     },
   },
 };
@@ -22,26 +22,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: '沒有收到圖片資料' });
     }
 
-    // 將 Base64 轉回 Buffer 透過後端傳到 telegra.ph 匿名圖床
     const buffer = Buffer.from(imageBase64, 'base64');
     const formData = new FormData();
-    formData.append('file', buffer, { filename: 'upload.jpg', contentType: mimeType || 'image/jpeg' });
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', buffer, { filename: 'upload.jpg', contentType: mimeType || 'image/jpeg' });
 
-    const uploadRes = await fetch('https://telegra.ph/upload', {
+    // 💡 改用 Catbox 匿名圖床 API，回傳結果直接就是純文字網址
+    const uploadRes = await fetch('https://catbox.moe/user/api.php', {
       method: 'POST',
       body: formData
     });
 
-    const result = await uploadRes.json();
+    const link = await uploadRes.text();
     
-    // Telegraph 回傳格式為陣列，例如 [{ src: "/file/xxxx.jpg" }]
-    if (Array.isArray(result) && result[0]?.src) {
-      const fullLink = `https://telegra.ph${result[0].src}`;
-      return res.status(200).json({ success: true, link: fullLink });
-    } else if (result.error) {
-      throw new Error(result.error);
+    if (uploadRes.ok && link && link.startsWith('http')) {
+      return res.status(200).json({ success: true, link: link.trim() });
     } else {
-      throw new Error('圖片上傳伺服器回應格式錯誤');
+      throw new Error(link || '圖片上傳伺服器回應失敗');
     }
 
   } catch (error) {
