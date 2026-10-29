@@ -92,7 +92,7 @@
 <body>
 
   <div class="container">
-    <h2>🚀 DonPick 現場連線批次上架</h2>
+    <h2>🚀 DonPick 現場連線極速批次上架</h2>
     
     <div class="form-group">
       <label>📦 主商品 / 連線名稱 (例如：9/5-12 日本東京連線 - 小網神社御守)</label>
@@ -196,7 +196,7 @@
           msgEl.innerText = `🎉 成功！${result.message}`;
           // 清空表單
           document.getElementById('productName').value = '';
-          document.getElementById('stylesContainer.innerHTML = '';
+          document.getElementById('stylesContainer').innerHTML = '';
           addStyleRow();
         } else {
           throw new Error(result.error || '未知錯誤');
