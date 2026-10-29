@@ -151,6 +151,7 @@
     function addStyleRow(styleName = '', price = '', imageUrl = '') {
       const container = document.getElementById('stylesContainer');
       const row = document.createElement('div');
+      row.className = 'style-row';
       row.innerHTML = `
         <input type="text" placeholder="編號與名稱" class="styleNameInput" value="${styleName}" style="flex: 2;">
         <input type="number" placeholder="價格" class="priceInput" value="${price}" style="flex: 1;">
