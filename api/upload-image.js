@@ -43,8 +43,8 @@ export default async function handler(req, res) {
         'User-Agent': 'DonPick-Image-Uploader'
       },
       body: JSON.stringify({
-        message: `Upload image ${fileName} via DonPick system`,
-        content: imageBase64, // GitHub API 接受 Base64 格式
+        message: `Upload image ${fileName} via DonPick system [skip ci]`, // 💡 加上 [skip ci] 讓 Vercel 自動略過
+        content: imageBase64,
         branch: branch
       })
     });
