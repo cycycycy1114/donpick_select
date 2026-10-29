@@ -227,97 +227,87 @@
       }
     }
 
-    // 🔍 請將原本的 uploadImage 整個替換成這段：
-    async function uploadImage(fileInput) {
-      const file = fileInput.files[0];
-      if (!file) return;
-    
-      const urlInput = fileInput.parentElement.querySelector('.imageUrlInput');
-      const btn = fileInput.nextElementSibling;
-      
-      btn.innerText = '⏳ 圖片上傳中...';
-      btn.style.background = '#faad14';
-    
-      try {
-        // 1. 將圖片檔案轉成 Base64，安全送到我們自己的 Vercel 後端
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        
-        reader.onload = async function() {
-          const base64String = reader.result.split(',')[1]; // 去掉前綴標頭
-          
-          const res = await fetch('/api/upload-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64String, mimeType: file.type })
-          });
-          
-          const result = await res.json();
-          if (result.success) {
-            urlInput.value = result.link; // 成功回傳公開網址！
-            btn.innerText = '✅ 圖片已就緒';
-            btn.style.background = '#52c41a';
-          } else {
-            throw new Error(result.error);
-          }
-        };
-      } catch (err) {
-        alert('圖片上傳失敗: ' + err.message);
-        btn.innerText = '📷 選擇相片/拍照';
-        btn.style.background = '#2eaadc';
-      }
-    }
+// 📍 修改位置：替換 admin.html 中的 uploadImage 函式
+async function uploadImage(fileInput) {
+  const file = fileInput.files[0];
+  if (!file) return;
 
-    // ➕ 在 script 裡面新增這支獨立函式
-    async function handleAiShelfUpload(fileInput) {
-      const file = fileInput.files[0];
-      if (!file) return;
+  const urlInput = fileInput.parentElement.querySelector('.imageUrlInput');
+  const btn = fileInput.nextElementSibling;
+  
+  btn.innerText = '⏳ 處理圖片中...';
+  btn.style.background = '#faad14';
+
+  try {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
     
-      const statusEl = document.getElementById('aiStatus');
-      statusEl.innerText = '⏳ 正在上傳圖床並透過 AI 解析貨架，請稍候...';
-    
-      const formData = new FormData();
-      formData.append('image', file);
-    
-      try {
-        // 1. 上傳圖床拿到公開網址
-        const imgRes = await fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: { Authorization: 'Client-ID 560248f76633fb6' },
-          body: formData
-        });
-        const imgData = await imgRes.json();
-        
-        if (!imgData.success) throw new Error('圖片上傳失敗');
-        const imageUrl = imgData.data.link;
-    
-        statusEl.innerText = '✨ AI 正在解讀商品與價格清單...';
-    
-        // 2. 呼叫後端 AI 辨識 API（讓 AI 回傳陣列清單）
-        const aiRes = await fetch('/api/ai-vision-identify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl, type: 'shelf' }) // 註記這是整張貨架/商品照
-        });
-        const aiData = await aiRes.json();
-    
-        if (aiData.success && aiData.items && aiData.items.length > 0) {
-          // 清空原本預設的空白列
-          document.getElementById('stylesContainer').innerHTML = '';
-          
-          // 自動把 AI 辨識出來的每一個商品塞進表格列，並把這張大圖網址帶入
-          aiData.items.forEach(item => {
-            addStyleRow(item.productName, item.price, imageUrl);
-          });
-    
-          statusEl.innerText = `🎉 AI 成功解析出 ${aiData.items.length} 個商品！已自動填入下方表格。`;
-        } else {
-          throw new Error('AI 未能辨識出商品清單');
-        }
-      } catch (err) {
-        statusEl.innerText = `❌ 解析失敗: ${err.message}，請手動新增。`;
+    reader.onload = async function() {
+      const base64String = reader.result.split(',')[1]; // 取得純 Base64
+      
+      const res = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64String, mimeType: file.type })
+      });
+      
+      const result = await res.json();
+      if (result.success) {
+        urlInput.value = result.link; // 將轉換好的圖片連結填入輸入框
+        btn.innerText = '✅ 圖片已就緒';
+        btn.style.background = '#52c41a';
+      } else {
+        throw new Error(result.error);
       }
-    }
+    };
+  } catch (err) {
+    alert('圖片處理失敗: ' + err.message);
+    btn.innerText = '📷 選擇相片/拍照';
+    btn.style.background = '#2eaadc';
+  }
+}
+
+// 📍 修改 admin.html 中的 handleAiShelfUpload 函式
+async function handleAiShelfUpload(fileInput) {
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('aiStatus');
+  statusEl.innerText = '⏳ 正在透過 AI 解析貨架照，請稍候...';
+
+  try {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    
+    reader.onload = async function() {
+      const base64String = reader.result.split(',')[1];
+      const dataUrl = reader.result; // 這是可以直接用的圖片預覽/Notion 格式
+
+      // 呼叫後端 AI 辨識 API，直接傳送 Base64
+      const aiRes = await fetch('/api/ai-vision-identify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64String, mimeType: file.type })
+      });
+      const aiData = await aiRes.json();
+
+      if (aiData.success && aiData.items && aiData.items.length > 0) {
+        document.getElementById('stylesContainer').innerHTML = '';
+        
+        // 將 AI 辨識出來的商品帶入表格，並賦予這張圖片的 Data URL
+        aiData.items.forEach(item => {
+          addStyleRow(item.productName, item.price, dataUrl);
+        });
+
+        statusEl.innerText = `🎉 AI 成功解析出 ${aiData.items.length} 個商品！已自動填入下方表格。`;
+      } else {
+        throw new Error('AI 未能辨識出商品清單');
+      }
+    };
+  } catch (err) {
+    statusEl.innerText = `❌ 解析失敗: ${err.message}，請手動新增。`;
+  }
+}
   </script>
 </body>
 </html>
