@@ -166,7 +166,7 @@
       `;
       container.appendChild(row);
     }
-
+    
     async function submitBatch() {
       const productName = document.getElementById('productName').value.trim();
       const category = document.getElementById('category').value.trim();
@@ -180,8 +180,13 @@
         const price = row.querySelector('.priceInput').value.trim();
         const imageUrl = row.querySelector('.imageUrlInput').value.trim();
 
-        if (styleName && price) {
-          styles.push({ styleName, price: Number(price), imageUrl });
+        // 💡 只要有填寫名稱或價格，就算有效，避免被嚴格限制卡住
+        if (styleName || price) {
+          styles.push({ 
+            styleName: styleName || '未命名款式', 
+            price: Number(price) || 0, 
+            imageUrl 
+          });
         }
       });
 
