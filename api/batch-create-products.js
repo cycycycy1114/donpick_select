@@ -160,15 +160,20 @@ export default async function handler(req, res) {
   }
 }
 
-// 💡 Notion 內建圖床上傳函式
+// 💡 Notion 內建圖床上傳函式（已加強 Base64 前綴清洗防呆）
 async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jpg') {
-  // 如果傳進來的是 http 外部網址，就不需要 Notion 內建上傳，直接回傳原網址
   if (!imageBase64 || imageBase64.startsWith('http')) {
     return null; 
   }
 
-  // 如果是 Base64，把它轉成 Buffer
-  const buffer = Buffer.from(imageBase64, 'base64');
+  // 🧹 防呆：如果字串包含 data:image/...;base64, 必須先把它切掉，只留純 Base64
+  let cleanBase64 = imageBase64;
+  if (imageBase64.includes('base64,')) {
+    cleanBase64 = imageBase64.split('base64,')[1];
+  }
+
+  // 將純 Base64 轉成 Buffer
+  const buffer = Buffer.from(cleanBase64, 'base64');
 
   // 步驟 1: 向 Notion 申請建立檔案上傳通道
   const createRes = await fetch('https://api.notion.com/v1/file_uploads', {
@@ -201,7 +206,8 @@ async function uploadToNotionStorage(imageBase64, mimeType, filename = 'image.jp
   });
 
   if (!uploadRes.ok) {
-    throw new Error('上傳檔案內容至 Notion 失敗');
+    const errText = await uploadRes.text();
+    throw new Error(`上傳檔案內容至 Notion 失敗: ${errText}`);
   }
 
   // 回傳 Notion 的 File Upload ID
