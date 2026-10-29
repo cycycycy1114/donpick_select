@@ -27,7 +27,8 @@ export default async function handler(req, res) {
       cleanBase64 = imageBase64.split('base64,')[1];
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // 💡 更新為官方指定的最新 gemini-3.8-flash 模型
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
     const apiResponse = await fetch(apiUrl, {
       method: 'POST',
@@ -43,11 +44,10 @@ export default async function handler(req, res) {
                 }
               },
               {
-                // 💡 最佳化提示詞：明確要求以 A, B, C 順序對應照片位置，名稱精簡為「代號-商品簡稱」
                 text: `請幫我辨識這張照片中的所有商品與價格。
 規則：
 1. 請依照順序（例如從左到右、從上到下）為每個商品編號：A、B、C、D...。
-2. 品名部分不需要過度繁雜的款式規格，請維持簡單的「代號-商品名」（例如：A-托特包、B-御守）。
+2. 品名部分請維持簡單的「代號-商品簡稱」（例如：A-托特包、B-御守）。
 3. 請仔細對應其價格，找不到價格請填 0。
 4. 請務必只回傳純 JSON 格式，結構必須為：{"items": [{"productName": "A-商品名", "price": 數字價格}]}`
               }
@@ -60,6 +60,7 @@ export default async function handler(req, res) {
     const result = await apiResponse.json();
     
     if (!apiResponse.ok) {
+      console.error("❌ Gemini API 錯誤回應:", JSON.stringify(result));
       throw new Error(result.error?.message || 'Gemini API 呼叫失敗');
     }
 
