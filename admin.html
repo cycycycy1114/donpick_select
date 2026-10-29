@@ -227,6 +227,7 @@
       }
     }
 
+    // 🔍 請將原本的 uploadImage 整個替換成這段：
     async function uploadImage(fileInput) {
       const file = fileInput.files[0];
       if (!file) return;
@@ -235,26 +236,35 @@
       const btn = fileInput.nextElementSibling;
       
       btn.innerText = '⏳ 圖片上傳中...';
-      
-      const formData = new FormData();
-      formData.append('image', file);
+      btn.style.background = '#faad14';
     
       try {
-        const response = await fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: { Authorization: 'Client-ID 560248f76633fb6' }, // 匿名測試 Client-ID
-          body: formData
-        });
-        const result = await response.json();
-        if (result.success) {
-          urlInput.value = result.data.link; // 自動把圖片網址填入欄位
-          btn.innerText = '✅ 圖片已就緒';
-        } else {
-          throw new Error();
-        }
+        // 1. 將圖片檔案轉成 Base64，安全送到我們自己的 Vercel 後端
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        
+        reader.onload = async function() {
+          const base64String = reader.result.split(',')[1]; // 去掉前綴標頭
+          
+          const res = await fetch('/api/upload-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64: base64String, mimeType: file.type })
+          });
+          
+          const result = await res.json();
+          if (result.success) {
+            urlInput.value = result.link; // 成功回傳公開網址！
+            btn.innerText = '✅ 圖片已就緒';
+            btn.style.background = '#52c41a';
+          } else {
+            throw new Error(result.error);
+          }
+        };
       } catch (err) {
-        alert('圖片上傳失敗，請改用貼上網址');
+        alert('圖片上傳失敗: ' + err.message);
         btn.innerText = '📷 選擇相片/拍照';
+        btn.style.background = '#2eaadc';
       }
     }
 
