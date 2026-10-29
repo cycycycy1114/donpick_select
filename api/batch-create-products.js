@@ -54,6 +54,10 @@ export default async function handler(req, res) {
       if (prop.type === 'date' && (key.includes('收單') || key.includes('截止') || key.includes('日期'))) {
         cDateKey = key;
       }
+      // 圖片文字備份欄位 (Rich Text)
+      if (prop.type === 'rich_text' && (key.includes('圖') || key.includes('image') || key.includes('備份'))) {
+        cTextImgKey = key;
+      }
     }
 
     // 如果還是找不到價格，退而求其次抓第一個不是匯率的數字欄位
@@ -122,11 +126,10 @@ export default async function handler(req, res) {
           };
         }
 
-        // 2. 同時將原始資料（無論是短網址還是長 Base64）寫入文字備份欄位（例如叫 "款式圖片備份" 或自動尋找 rich_text 欄位）
-        const textImgKey = Object.keys(p).find(k => p[k]?.type === 'rich_text' && (k.includes('圖') || k.includes('image') || k.includes('備份')));
-        if (textImgKey) {
-          cProperties[textImgKey] = {
-            rich_text: [{ text: { content: style.imageUrl.substring(0, 2000) } }] // Notion text 也有上限但比 files 寬容，或可完整存
+        // 2. 如果有定義文字備份欄位，將原始資料（長 Base64 或網址）寫入 rich_text 備份
+        if (cTextImgKey) {
+          cProperties[cTextImgKey] = {
+            rich_text: [{ text: { content: style.imageUrl } }]
           };
         }
       }
